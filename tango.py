@@ -96,6 +96,49 @@ def s(filename: Path, ids: List[int]):
     d = {"filename": str(filename), "ids": ids}
     print_json(data=d)
 
+
+@app.command()
+def file_status(filename: Path):
+    status = [
+        {
+            "line": 5,
+            "hash": "5",
+            "sources": 1,
+            "dests": 1,
+            "status": 0
+        },
+        {
+            "line": 6,
+            "hash": "6",
+            "sources": 0,
+            "dests": 2,
+            "status": 1
+        },
+        {
+            "line": 30,
+            "hash": "30",
+            "sources": 1,
+            "dests": 1,
+            "status": 0
+        },
+        {
+            "line": 32,
+            "hash": "32",
+            "sources": 1,
+            "dests": 1,
+            "status": 0
+        },
+        {
+            "line": 110,
+            "hash": "110",
+            "sources": 1,
+            "dests": 1,
+            "status": 0
+        }
+    ]
+    print_json(data=status)
+
+
 @app.command()
 def add(filename: Path, start: int = 0, end: int = 0, comment: str=""):
     p = Project(path=".")

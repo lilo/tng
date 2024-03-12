@@ -3,6 +3,9 @@
 ;;; Commentary:
 ;;; based on linum.el
 
+;;; TODO:
+;;; 
+
 ;;; Code:
 
 (defvar-local tng-overlays (make-hash-table) "Overlays used in this buffer.") ; TODO: vector
@@ -11,41 +14,12 @@
       '((sources . ("s0" "s1" "s2"))
 	(dests . ("d0" "d1" "d2"))))
 
-(defvar-local tng-alist-response
-    [((line . 5)
-      (hash . "5")
-      (sources . 1)
-      (dests . 1)
-      (status . 0))
-     ((line . 6)
-      (hash . "6")
-      (sources . 0)
-      (dests . 2)
-      (status . 1))
-     ((line . 30)
-      (hash . "30")
-      (sources . 1)
-      (dests . 1)
-      (status . 0))
-     ((line . 32)
-      (hash . "32")
-      (sources . 1)
-      (dests . 1)
-      (status . 0))
-     ((line . 110)
-      (hash . "110")
-      (sources . 1)
-      (dests . 1)
-      (status . 0))
-     ])
-
-
-(defvar-local tng-json-response
-    (json-encode tng-alist-response))
-
 (defun tng-setup-meta ()
   "Setup the meta-info for each line."
-  (let* ((tngpy-response (json-read-from-string tng-json-response)))
+  (let* ((tngpy-response
+	  (json-read-from-string
+	   (shell-command-to-string
+	    ".\\v\\Scripts\\python.exe tango.py file-status tng.el"))))
     (save-excursion
       (cl-loop
        for line-meta-info
@@ -100,17 +74,17 @@
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c") #'tng-cc)
     (define-key map (kbd "v") #'tng-describe-line)
-    (define-key map (kbd "i") #'tng-toggle-lines)
+    (define-key map (kbd "i") #'tng-mode)
     map))
 
-;; (global-set-key (kbd "C-c t") tng-keymap)
+(global-set-key (kbd "C-c t") tng-keymap)
 
 (defun tng-vtable-buffer ()
   "Pop a BUF-NAME with a `vtable' of COLUMNS listing OBJECTS.
 ACTIONS should be a plist of key and command. See the vtable
 manual for details."
   (interactive)
-  (let ((buf-name "*VTABLE*")
+  (let ((buf-name "*Tng list*")
 	(columns '("ID" "Name" "N"))
 	(objects '((1 "n1" 1) (2 "n2" 2))))
     (with-current-buffer (get-buffer-create buf-name)
@@ -126,7 +100,7 @@ manual for details."
        :sort-by '((0 . ascend))
        :keymap (define-keymap
 		 "q" #'quit-window)
-					;:actions actions
+       ;; :actions actions
        )
       (local-set-key (kbd "q") #'quit-window)
       (setf buffer-read-only t))
