@@ -8,18 +8,20 @@
 
 ;;; Code:
 
-(defvar-local tng-overlays (make-hash-table) "Overlays used in this buffer.") ; TODO: vector
+(defvar-local
+    tng-overlays (make-hash-table) ; TODO: vector
+  "Overlays used in this buffer.")
 
 (setq tng-line-meta
       '((sources . ("s0" "s1" "s2"))
-	(dests . ("d0" "d1" "d2"))))
+        (dests . ("d0" "d1" "d2"))))
 
 (defun tng-setup-meta ()
   "Setup the meta-info for each line."
   (let* ((tngpy-response
-	  (json-read-from-string
-	   (shell-command-to-string
-	    ".\\v\\Scripts\\python.exe tango.py file-status tng.el"))))
+          (json-read-from-string
+           (shell-command-to-string
+            ".\\v\\Scripts\\python.exe tango.py file-status tng.el"))))
     (save-excursion
       (cl-loop
        for line-meta-info
@@ -27,33 +29,26 @@
        do
        ;; create overlays, set margins. TODO: collect to vector `tng-overlays'
        (let-alist line-meta-info
-	 (goto-line .line)
-	 (let* ((ov (make-overlay (point) (point)))
-		(str (tng-get-margin-str line-meta-info)))
-	   (puthash
-	    .line
-	    (gethash
-	     .line
-	     tng-overlays ov) tng-overlays)
-	   (overlay-put ov 'before-string
-			(propertize " " 'display
-				    `((margin right-margin) ,str)))))))))
+         (goto-line .line)
+         (let* ((ov (make-overlay (point) (point)))
+                (str (tng-get-margin-str line-meta-info)))
+           (puthash
+            .line
+            (gethash .line tng-overlays ov)
+            tng-overlays)
+           (overlay-put ov 'before-string
+                        (propertize " " 'display
+                                    `((margin right-margin) ,str)))))))))
 
 (defun tng-get-margin-str (line-meta-alist)
   "Get tng margin str for line."
   (let-alist line-meta-alist
     (let* ((left-bracket (propertize "[" 'face 'bold))
-	   (marker (propertize (if (zerop .status) " " "*") 'face 'bold))
-	   (right-bracket (propertize "]" 'face 'bold))
-	   (face (if (or (> .line 100) (< .line 10)) 'bold 'shadow)))
+           (marker (propertize (if (zerop .status) " " "*") 'face 'bold))
+           (right-bracket (propertize "]" 'face 'bold))
+           (face (if (or (> .line 100) (< .line 10)) 'bold 'shadow)))
       (format "%s%s%s]" left-bracket marker right-bracket))))
 
-(defun tng-pop-up ()
-  "Pop-up window"
-  (interactive)
-  (with-temp-buffer-window
-    "*TNG*" nil nil
-    (insert "xxxxxxx")))
 
 ;;; tng major mode for displaying deps
 
@@ -85,8 +80,8 @@ ACTIONS should be a plist of key and command. See the vtable
 manual for details."
   (interactive)
   (let ((buf-name "*Tng list*")
-	(columns '("ID" "Name" "N"))
-	(objects '((1 "n1" 1) (2 "n2" 2))))
+        (columns '("ID" "Name" "N"))
+        (objects '((1 "n1" 1) (2 "n2" 2))))
     (with-current-buffer (get-buffer-create buf-name)
       (require 'vtable)
       (setf buffer-read-only nil)
@@ -99,7 +94,7 @@ manual for details."
        ;; sort by display text (or, name)
        :sort-by '((0 . ascend))
        :keymap (define-keymap
-		 "q" #'quit-window)
+                 "q" #'quit-window)
        ;; :actions actions
        )
       (local-set-key (kbd "q") #'quit-window)
@@ -135,7 +130,7 @@ manual for details."
                   'tng-update-current nil t)
         (add-hook 'post-command-hook 'tng-update-current nil t)
         (add-hook 'after-change-functions 'tng-after-change t)
-	(tng-delete-overlays)
+        (tng-delete-overlays)
         (tng-update-current))
     (remove-hook 'post-command-hook 'tng-update-current t)
     (remove-hook 'window-scroll-functions 'tng-after-scroll t)
@@ -160,8 +155,8 @@ manual for details."
   "Tng update BUFFER."
   (with-current-buffer buffer
     (when tng-mode
-	(maphash (lambda (k v) (delete-overlay v)) tng-overlays)
-	(clrhash tng-overlays)
+        (maphash (lambda (k v) (delete-overlay v)) tng-overlays)
+        (clrhash tng-overlays)
         (mapc #'tng-update-window
               (get-buffer-window-list buffer nil 'visible)))))
 
@@ -198,15 +193,15 @@ manual for details."
   "Set window margins in window WIN."
   (tng-setup-meta)
   (let ((width 3)
-	(existing-margins (window-margins win)))
+        (existing-margins (window-margins win)))
     (progn
       (when (display-graphic-p)
-	(setq width (ceiling
+        (setq width (ceiling
                      (/ (* width 1.0 (tng--face-width 'default))
-			(frame-char-width)))))
+                        (frame-char-width)))))
       (when (> width (or (cdr existing-margins) 0))
-	(set-window-margins win (car existing-margins) width)
-	(set-window-parameter win 'tng--set-margins (window-margins win))))))
+        (set-window-margins win (car existing-margins) width)
+        (set-window-parameter win 'tng--set-margins (window-margins win))))))
 
 (provide 'tng)
 ;;; tng.el ends here
