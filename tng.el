@@ -12,9 +12,7 @@
     tng-overlays (make-hash-table) ; TODO: vector
   "Overlays used in this buffer.")
 
-(setq tng-line-meta
-      '((sources . ("s0" "s1" "s2"))
-        (dests . ("d0" "d1" "d2"))))
+(defvar-local tng-db-filename "tango.sqlite3")
 
 (defun tng-setup-meta ()
   "Setup the meta-info for each line."
@@ -65,11 +63,30 @@
   (interactive)
   (message "TNG C-C"))
 
+(defun tng-send-region (arg begin end)
+  "Add new resource from the region"
+  (interactive "P\nr")
+  (if (region-active-p)
+      (let* ((begin-line (line-number-at-pos begin t))
+             (end-line (line-number-at-pos end t))
+             (sha1-hash (sha1 (buffer-substring-no-properties begin end)))
+             (filename (buffer-file-name))
+             (comment (if arg (read-from-minibuffer "Comment for this chunk: "))))
+        (sqlite-execute
+         (sqlite-open tng-db-filename)
+         "INSERT \
+INTO resource(filename,comment,start_line,end_line) \
+VALUES (?,?,?,?)"
+         (list filename comment begin-line end-line))
+        (message "lines: %s %s %s [arg: %s]" begin-line end-line sha1-hash arg))
+    (error "No region selected")))
+
 (defvar tng-keymap
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c") #'tng-cc)
     (define-key map (kbd "v") #'tng-describe-line)
     (define-key map (kbd "i") #'tng-mode)
+    (define-key map (kbd "a") #'tng-send-region)
     map))
 
 (global-set-key (kbd "C-c t") tng-keymap)
