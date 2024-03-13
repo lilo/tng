@@ -148,14 +148,14 @@ def status():
     print("status")
 
 @app.command()
-def add_tadd(filename: Path, linenos: List[int]):
+def add_resource(filename: Path, linenos: List[int]):
     p = Project(path=".")
     p.add_resource(
-        filename=filename,
+        filename=str(filename),
         start_line=min(linenos),
         end_line=max(linenos)
     )
-    print("Resource added.")
+    print_json(data={"status": "ok"})
 
 if __name__ == "__main__":
     app()
