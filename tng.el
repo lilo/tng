@@ -1,18 +1,70 @@
 ;;; package --- tng.el
 
 ;;; Commentary:
-;;; based on linum.el
+;;; 
+;;; "C-c t a" `#'tng-add-region'
+;;; "C-c t v" `#'tng-vtable'
+;;; "C-c t i" `#'tng-mode'
+;;; 
+;;; tng major mode to view dependencies
+;;; - list all resources for current file
+;;; - list dependencies for each resource
+;;; - delete resource
+;;; - goto
+;;;
+;;; - 
+;;; 
 
 ;;; TODO:
 ;;; 
 
 ;;; Code:
 
+(require 'vtable)
+
 (defvar-local
     tng-overlays (make-hash-table) ; TODO: vector
   "Overlays used in this buffer.")
 
-(defvar-local tng-db-filename "tango.sqlite3")
+(defvar-local tng-project-dir "c:/Users/power/dev/tng/")
+
+(defvar-local tng-db-filename
+    (file-name-concat tng-project-dir "tango.sqlite3"))
+
+(defun tng-init-db (&optional dir)
+  "Create tng DB in the project root dir."
+  (progn
+    (sqlite-execute
+     (sqlite-open tng-db-filename)
+     "CREATE TABLE \"chunk\" (\
+	\"id\"	INTEGER,\
+	\"filepath\"	TEXT NOT NULL,\
+	\"sha1hash\"	TEXT NOT NULL,\
+	\"start_line\"	INTEGER NOT NULL,\
+	\"end_line\"	INTEGER,\
+	\"comment\"	TEXT,
+	PRIMARY KEY(\"id\" AUTOINCREMENT));")
+    (sqlite-execute
+     (sqlite-open tng-db-filename)
+     "CREATE TABLE \"dep\" (
+	\"id\"	INTEGER,
+	\"src\"	INTEGER NOT NULL,
+	\"dst\"	INTEGER NOT NULL,
+	\"comment\"	TEXT,
+	FOREIGN KEY(\"src\") REFERENCES \"chunk\"(\"id\"),
+	PRIMARY KEY(\"id\" AUTOINCREMENT),
+	FOREIGN KEY(\"dst\") REFERENCES \"chunk\"(\"id\"));")))
+
+(defun tng-deps ()
+  (let ((filepath
+         (file-relative-name
+          (buffer-file-name)
+          (projectile-project-root)))
+        (db (sqlite-open tng-db-filename)))
+  (sqlite-select
+   db
+   "select id,filepath,start_line,end_line,comment,sha1hash from chunk where filepath=?"
+   (list filepath))))
 
 (defun tng-setup-meta ()
   "Setup the meta-info for each line."
@@ -59,10 +111,6 @@
 (defun tng-add-src-to-res-under-point ())
 (defun tng-add-dst-to-res-under-point ())
 
-(defun tng-cc ()
-  (interactive)
-  (message "TNG C-C"))
-
 (defun tng-send-region (arg begin end)
   "Add new resource from the region"
   (interactive "P\nr")
@@ -70,37 +118,37 @@
       (let* ((begin-line (line-number-at-pos begin t))
              (end-line (line-number-at-pos end t))
              (sha1-hash (sha1 (buffer-substring-no-properties begin end)))
-             (filename (buffer-file-name))
+             (filepath (file-relative-name (buffer-file-name) (projectile-project-root)))
              (comment (if arg (read-from-minibuffer "Comment for this chunk: "))))
         (sqlite-execute
          (sqlite-open tng-db-filename)
          "INSERT \
-INTO resource(filename,comment,start_line,end_line) \
-VALUES (?,?,?,?)"
-         (list filename comment begin-line end-line))
+INTO chunk(filepath,sha1hash,comment,start_line,end_line) \
+VALUES (?,?,?,?,?)"
+         (list filepath sha1-hash comment begin-line end-line))
         (message "lines: %s %s %s [arg: %s]" begin-line end-line sha1-hash arg))
     (error "No region selected")))
 
 (defvar tng-keymap
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c") #'tng-cc)
-    (define-key map (kbd "v") #'tng-describe-line)
+    (define-key map (kbd "v") #'tng-vtable)
     (define-key map (kbd "i") #'tng-mode)
     (define-key map (kbd "a") #'tng-send-region)
     map))
 
 (global-set-key (kbd "C-c t") tng-keymap)
 
-(defun tng-vtable-buffer ()
-  "Pop a BUF-NAME with a `vtable' of COLUMNS listing OBJECTS.
-ACTIONS should be a plist of key and command. See the vtable
-manual for details."
+(defun tng-vtable ()
   (interactive)
-  (let ((buf-name "*Tng list*")
-        (columns '("ID" "Name" "N"))
-        (objects '((1 "n1" 1) (2 "n2" 2))))
+  (let* ((buf-name "*Tng list*")
+         (columns
+          '((:name "id" :max-width 3 :align 'left)
+            (:name "File" :min-width 10 :align 'center)
+            (:name "Start" :min-width 5)
+            (:name "End" :min-width 5)
+            (:name "Comment")))
+         (objects (tng-deps)))
     (with-current-buffer (get-buffer-create buf-name)
-      (require 'vtable)
       (setf buffer-read-only nil)
       (erase-buffer)
       (make-vtable
@@ -108,8 +156,8 @@ manual for details."
        :objects objects
        ;; force fixed width face
        :face 'default
-       ;; sort by display text (or, name)
-       :sort-by '((0 . ascend))
+
+       ;; :sort-by '((0 . ascend))        
        :keymap (define-keymap
                  "q" #'quit-window)
        ;; :actions actions
@@ -119,7 +167,7 @@ manual for details."
     (pop-to-buffer buf-name)))
 
 (defgroup tng nil
-  "Show tng status in the right margin."
+  "Track deps."
   :group 'convenience)
 
 (defface tng-shadow
