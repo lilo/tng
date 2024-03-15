@@ -68,10 +68,7 @@
 
 (defun tng-setup-meta ()
   "Setup the meta-info for each line."
-  (let* ((tngpy-response
-          (json-read-from-string
-           (shell-command-to-string
-            ".\\v\\Scripts\\python.exe tango.py file-status tng.el"))))
+  (let ((deps (tng-deps)))
     (save-excursion
       (cl-loop
        for line-meta-info
@@ -111,7 +108,7 @@
 (defun tng-add-src-to-res-under-point ())
 (defun tng-add-dst-to-res-under-point ())
 
-(defun tng-send-region (arg begin end)
+(defun tng-add-region (arg begin end)
   "Add new resource from the region"
   (interactive "P\nr")
   (if (region-active-p)
@@ -133,7 +130,7 @@ VALUES (?,?,?,?,?)"
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "v") #'tng-vtable)
     (define-key map (kbd "i") #'tng-mode)
-    (define-key map (kbd "a") #'tng-send-region)
+    (define-key map (kbd "a") #'tng-add-region)
     map))
 
 (global-set-key (kbd "C-c t") tng-keymap)
