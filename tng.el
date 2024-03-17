@@ -1,4 +1,4 @@
-;;; package --- tng.el
+;;; package --- tng.el -*- lexical-binding:t; coding:utf-8 -*-
 
 ;;; Commentary:
 ;;; 
@@ -21,6 +21,7 @@
 ;;; Code:
 
 (require 'vtable)
+(require 'magit-section)
 
 (defvar-local
     tng-overlays (make-hash-table) ; TODO: vector
@@ -54,6 +55,51 @@
 	FOREIGN KEY(\"src\") REFERENCES \"chunk\"(\"id\"),
 	PRIMARY KEY(\"id\" AUTOINCREMENT),
 	FOREIGN KEY(\"dst\") REFERENCES \"chunk\"(\"id\"));")))
+
+
+;;; MAGIT
+
+(defclass tng-section (magit-section)
+  ((in :initform nil)
+   (start :initform nil)
+   (end :initform nil)
+   (comment :initform nil)
+   (keymap :initform 'tng-info-map))
+  "A `magit-section' used by `tng-mode'")
+
+(define-derived-mode tng-info-mode magit-section-mode "Tng-info"
+  "TNG Buf Major mode"
+  :group 'tng)
+
+(defun tng-message-yo ()
+  (interactive)
+  (message "=======YO=========="))
+
+(defvar tng-info-map
+  (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map magit-section-mode-map)
+    (define-key map (kbd "C-m") 'tng-message-yo)
+    ;; (define-key map [remap revert-buffer] 'org-roam-buffer-refresh)
+    map)
+  "Parent keymap")
+
+(defun tng-display-sections ()
+  ""
+  (interactive)
+  (with-current-buffer
+      (get-buffer-create "*TNG*")
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (tng-info-mode)
+      (magit-insert-section resources-section (tng-section "Pew pew" nil)
+        (magit-insert-heading "Resources: ")
+        ()
+        (insert "resource0")
+        (insert ?\n)))
+  (display-buffer (get-buffer-create "*TNG*"))))
+
+;;; --------------------------------------------------------------------
+
 
 (defun tng-deps ()
   (let ((filepath
@@ -96,11 +142,6 @@
            (face (if (or (> .line 100) (< .line 10)) 'bold 'shadow)))
       (format "%s%s%s]" left-bracket marker right-bracket))))
 
-
-;;; tng major mode for displaying deps
-
-;;; header-line-format
-
 (defun tng-goto-next-dst ())
 (defun tng-goto-next-src ())
 (defun tng-show-pop-up ())
@@ -123,14 +164,16 @@
 INTO chunk(filepath,sha1hash,comment,start_line,end_line) \
 VALUES (?,?,?,?,?)"
          (list filepath sha1-hash comment begin-line end-line))
+        (deactivate-mark)
         (message "lines: %s %s %s [arg: %s]" begin-line end-line sha1-hash arg))
     (error "No region selected")))
 
 (defvar tng-keymap
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "v") #'tng-vtable)
+    (define-key map (kbd "v") #'tng-display-sections)
     (define-key map (kbd "i") #'tng-mode)
     (define-key map (kbd "a") #'tng-add-region)
+    (define-key map (kbd "m") #'tng-info-mode)
     map))
 
 (global-set-key (kbd "C-c t") tng-keymap)
@@ -156,7 +199,8 @@ VALUES (?,?,?,?,?)"
 
        ;; :sort-by '((0 . ascend))        
        :keymap (define-keymap
-                 "q" #'quit-window)
+                 "q" #'quit-window
+                 "d" #'debug)
        ;; :actions actions
        )
       (local-set-key (kbd "q") #'quit-window)
