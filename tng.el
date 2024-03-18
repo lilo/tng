@@ -3,7 +3,6 @@
 ;;; Commentary:
 ;;; 
 ;;; "C-c t a" `#'tng-add-region'
-;;; "C-c t v" `#'tng-vtable'
 ;;; "C-c t i" `#'tng-mode'
 ;;; 
 ;;; tng major mode to view dependencies
@@ -20,7 +19,7 @@
 
 ;;; Code:
 
-(require 'vtable)
+(require 'cl-lib)
 (require 'magit-section)
 
 (defvar-local
@@ -60,7 +59,7 @@
 ;;; MAGIT
 
 (defclass tng-section (magit-section)
-  ((in :initform nil)
+  ((id :initform nil)
    (start :initform nil)
    (end :initform nil)
    (comment :initform nil)
@@ -93,45 +92,48 @@
       (tng-info-mode)
       (magit-insert-section resources-section (tng-section "Pew pew" nil)
         (magit-insert-heading "Resources: ")
-        ()
-        (insert "resource0")
         (insert ?\n)))
   (display-buffer (get-buffer-create "*TNG*"))))
 
 ;;; --------------------------------------------------------------------
 
 
-(defun tng-deps ()
-  (let ((filepath
-         (file-relative-name
-          (buffer-file-name)
-          (projectile-project-root)))
-        (db (sqlite-open tng-db-filename)))
-  (sqlite-select
-   db
-   "select id,filepath,start_line,end_line,comment,sha1hash from chunk where filepath=?"
-   (list filepath))))
+(defun tng-current-chunks ()
+  "Return alist of all chunks in current file."
+  (let* ((filepath
+          (file-relative-name
+           (buffer-file-name)
+           (projectile-project-root)))
+         (db (sqlite-open tng-db-filename))
+         (records (sqlite-select
+                  db
+                  "select id,filepath,start_line,end_line,comment,sha1hash from chunk where filepath=?"
+                  (list filepath)
+                  'full))
+         (header (car records))
+         (chunks (cdr records)))
+    (mapcar
+     (lambda (chunk) (cl-pairlis header chunk))
+     chunks)))
+
 
 (defun tng-setup-meta ()
-  "Setup the meta-info for each line."
-  (let ((deps (tng-deps)))
+  "Setup the meta-info for each line of the current file."
+  (let ((chunks (tng-current-chunks)))
     (save-excursion
-      (cl-loop
-       for line-meta-info
-       across tngpy-response
-       do
-       ;; create overlays, set margins. TODO: collect to vector `tng-overlays'
-       (let-alist line-meta-info
-         (goto-line .line)
-         (let* ((ov (make-overlay (point) (point)))
-                (str (tng-get-margin-str line-meta-info)))
-           (puthash
-            .line
-            (gethash .line tng-overlays ov)
-            tng-overlays)
-           (overlay-put ov 'before-string
-                        (propertize " " 'display
-                                    `((margin right-margin) ,str)))))))))
+      (progn
+        (dolist ((chunk chunks))
+         (let-alist chunk
+           (goto-line .line)
+           (let* ((ov (make-overlay (point) (point)))
+                  (str (tng-get-margin-str chunk)))
+             (puthash
+              .line
+              (gethash .line tng-overlays ov)
+              tng-overlays)
+             (overlay-put ov 'before-string
+                          (propertize " " 'display
+                                      `((margin right-margin) ,str))))))))))
 
 (defun tng-get-margin-str (line-meta-alist)
   "Get tng margin str for line."
@@ -141,6 +143,9 @@
            (right-bracket (propertize "]" 'face 'bold))
            (face (if (or (> .line 100) (< .line 10)) 'bold 'shadow)))
       (format "%s%s%s]" left-bracket marker right-bracket))))
+
+(defun tng-visible-lines ()
+  "Return start and end")
 
 (defun tng-goto-next-dst ())
 (defun tng-goto-next-src ())
@@ -173,39 +178,9 @@ VALUES (?,?,?,?,?)"
     (define-key map (kbd "v") #'tng-display-sections)
     (define-key map (kbd "i") #'tng-mode)
     (define-key map (kbd "a") #'tng-add-region)
-    (define-key map (kbd "m") #'tng-info-mode)
     map))
 
-(global-set-key (kbd "C-c t") tng-keymap)
-
-(defun tng-vtable ()
-  (interactive)
-  (let* ((buf-name "*Tng list*")
-         (columns
-          '((:name "id" :max-width 3 :align 'left)
-            (:name "File" :min-width 10 :align 'center)
-            (:name "Start" :min-width 5)
-            (:name "End" :min-width 5)
-            (:name "Comment")))
-         (objects (tng-deps)))
-    (with-current-buffer (get-buffer-create buf-name)
-      (setf buffer-read-only nil)
-      (erase-buffer)
-      (make-vtable
-       :columns columns
-       :objects objects
-       ;; force fixed width face
-       :face 'default
-
-       ;; :sort-by '((0 . ascend))        
-       :keymap (define-keymap
-                 "q" #'quit-window
-                 "d" #'debug)
-       ;; :actions actions
-       )
-      (local-set-key (kbd "q") #'quit-window)
-      (setf buffer-read-only t))
-    (pop-to-buffer buf-name)))
+(global-set-key (kbd "M-t") tng-keymap)
 
 (defgroup tng nil
   "Track deps."
