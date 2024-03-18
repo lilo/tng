@@ -70,14 +70,10 @@
   "TNG Buf Major mode"
   :group 'tng)
 
-(defun tng-message-yo ()
-  (interactive)
-  (message "=======YO=========="))
-
 (defvar tng-info-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map magit-section-mode-map)
-    (define-key map (kbd "C-m") 'tng-message-yo)
+    ;; (define-key map (kbd "C-m") 'tng-message-yo)
     ;; (define-key map [remap revert-buffer] 'org-roam-buffer-refresh)
     map)
   "Parent keymap")
