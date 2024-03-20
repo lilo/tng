@@ -1,6 +1,6 @@
 ;;; package --- tng.el -*- lexical-binding:t; coding:utf-8 -*-
 ;;; Commentary:
-;;; 
+;;;
 ;;; TODO:
 ;;;
 ;;; Code:
@@ -52,38 +52,63 @@
 
 ;;; MAGIT
 
-(defclass tng-section (magit-section)
-  ((id :initform nil)
-   (start :initform nil)
-   (end :initform nil)
-   (comment :initform nil)
-   (keymap :initform 'tng-info-map))
-  "A `magit-section' used by `tng-mode'")
 
 (define-derived-mode tng-info-mode magit-section-mode "Tng-info"
   "TNG Buf Major mode"
   :group 'tng)
 
-(defvar tng-info-map
+(defun tng-jump-to-chunk ()
+  "Jump to the chunk"
+  (interactive)
+  (let* ((current-section (magit-current-section))
+         (filepath (oref current-section filepath))
+         (start-line (oref current-section start-line))
+         (buf (find-file-noselect filepath))
+         ;; #'pop-to-buffer-same-window)))
+         (display-buffer-fn #'switch-to-buffer-other-window))
+    (funcall display-buffer-fn buf)
+    (with-current-buffer buf
+      (widen)
+      (goto-line start-line))))
+
+(defvar tng-section-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map magit-section-mode-map)
-    ;; (define-key map (kbd "C-m") 'tng-message-yo)
+    ;; (define-key map (kbd "C-m") #'pulsar-pulse-line)
+    (define-key map (kbd "C-m") #'tng-jump-to-chunk)
     ;; (define-key map [remap revert-buffer] 'org-roam-buffer-refresh)
     map)
   "Parent keymap")
 
+(defclass tng-section (magit-section)
+  ((id :initform nil)
+   (start-line :initform nil)
+   (end-line :initform nil)
+   (filepath :initform nil)
+   (comment :initform nil)
+   (keymap :initform 'tng-section-map)))
+
 (defun tng-display-sections ()
-  ""
+  "Display the list of chunks."
   (interactive)
-  (with-current-buffer
-      (get-buffer-create "*TNG*")
-    (let ((inhibit-read-only t))
-      (erase-buffer)
-      (tng-info-mode)
-      (magit-insert-section resources-section (tng-section "Pew pew" nil)
-        (magit-insert-heading "Resources: ")
-        (insert ?\n)))
-  (display-buffer (get-buffer-create "*TNG*"))))
+  (let ((current-chunks (tng-current-chunks)))
+    (with-current-buffer
+        (get-buffer-create "*TNG*")
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (tng-info-mode)
+        (magit-insert-section (tng-section)
+          (magit-insert-heading "Chunks: ")
+          (dolist (chunk current-chunks)
+            (magit-insert-section section (tng-section)
+              (let ((filepath (alist-get 'filepath chunk nil nil #'string-equal))
+                    (start-line (alist-get 'start_line chunk nil nil #'string-equal))
+                    (end-line (alist-get 'end_line chunk nil nil #'string-equal)))
+                (insert (format "%s[%d:%d]\n" filepath start-line end-line))
+                (oset section filepath filepath)
+                (oset section start-line start-line)
+                (oset section end-line end-line))))))))
+    (display-buffer (get-buffer-create "*TNG*")))
 
 ;;; --------------------------------------------------------------------
 
@@ -96,7 +121,7 @@
                   "select id,filepath,start_line,end_line,comment,sha1hash from chunk where filepath=?"
                   (list filepath)
                   'full))
-         (header (car records))
+         (header (mapcar #'make-symbol (car records)))
          (chunks (cdr records)))
     (mapcar
      (lambda (chunk) (cl-pairlis header chunk))
@@ -113,12 +138,13 @@ select
  c.id cid,
  count(sd.id) sc,
  count(dd.id) sd,
+ c.filepath cf,
  c.start_line csl,
  c.end_line cel,
  c.sha1hash csha1,
  c.comment cc
 from
- chunk c 
+ chunk c
  left join dep sd on (sd.src = cid)
  left join dep dd on (dd.dst = cid)
 group by cid
@@ -137,15 +163,16 @@ order by cid
   "Setup the meta-info for each line of the current file."
   (let* ((current-lines (tng--visible-lines))
          (line-start (car current-lines))
-         (line-end (cdr current-lines)))
+         (line-end (cdr current-lines))
+         (current-metainfo (tng-lines-report)))
     (save-excursion
       (cl-loop
        for line from line-start to line-end
        for chunks = (seq-keep
                       (lambda (a)
                         (and
-                         (> line (alist-get "start_line" a nil nil #'equal))
-                         (> (alist-get "end_line" a nil nil #'equal) line)
+                         (> line (alist-get 'start_line a nil nil #'equal))
+                         (> (alist-get 'end_line a nil nil #'equal) line)
                          a))
                       (tng-current-chunks))
        do
