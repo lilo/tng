@@ -153,21 +153,22 @@
 (defun tng-add-region (arg begin end)
   "Add new resource from the region"
   (interactive "P\nr")
-  (if (region-active-p)
-      (let* ((begin-line (line-number-at-pos begin t))
-             (end-line (line-number-at-pos end t))
-             (sha1-hash (sha1 (buffer-substring-no-properties begin end)))
-             (filepath (file-relative-name (buffer-file-name) (projectile-project-root)))
-             (comment (if arg (read-from-minibuffer "Comment for this chunk: "))))
-        (sqlite-execute
-         (sqlite-open tng-db-filename)
-         "INSERT \
+  (let* ((region (region-active-p))
+         (begin-line (line-number-at-pos (if region begin) t))
+         (end-line (line-number-at-pos (if region end) t))
+         (sha1-hash
+          (if region
+              (sha1 (buffer-substring-no-properties begin end))
+            (sha1 (thing-at-point 'line t))))
+         (filepath (file-relative-name (buffer-file-name) (projectile-project-root)))
+         (comment (if arg (read-from-minibuffer "Comment for this chunk: "))))
+    (sqlite-execute
+     (sqlite-open tng-db-filename)
+     "INSERT \
 INTO chunk(filepath,sha1hash,comment,start_line,end_line) \
 VALUES (?,?,?,?,?)"
-         (list filepath sha1-hash comment begin-line end-line))
-        (deactivate-mark)
-        (message "lines: %s %s %s [arg: %s]" begin-line end-line sha1-hash arg))
-    (error "No region selected")))
+     (list filepath sha1-hash comment begin-line end-line))
+    (deactivate-mark)))
 
 (defvar tng-keymap
   (let ((map (make-sparse-keymap)))
