@@ -7,12 +7,13 @@
 
 (require 'cl-lib)
 (require 'magit-section)
+(require 'projectile)
 
 (defvar-local
     tng-overlays (make-hash-table) ; TODO: vector
   "Overlays used in this buffer.")
 
-(defvar-local tng-project-dir nil
+(defvar-local tng-project-dir (projectile-project-root)
   "Root of current project.")
 
 (defvar-local tng-db-filename
