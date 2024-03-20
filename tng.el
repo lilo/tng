@@ -1,22 +1,8 @@
 ;;; package --- tng.el -*- lexical-binding:t; coding:utf-8 -*-
-
 ;;; Commentary:
 ;;; 
-;;; "C-c t a" `#'tng-add-region'
-;;; "C-c t i" `#'tng-mode'
-;;; 
-;;; tng major mode to view dependencies
-;;; - list all resources for current file
-;;; - list dependencies for each resource
-;;; - delete resource
-;;; - goto
-;;;
-;;; - 
-;;; 
-
 ;;; TODO:
-;;; unique chunks (marker, comment, hash)
-
+;;;
 ;;; Code:
 
 (require 'cl-lib)
