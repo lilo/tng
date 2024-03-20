@@ -15,7 +15,7 @@
 ;;; 
 
 ;;; TODO:
-;;; 
+;;; unique chunks (marker, comment, hash)
 
 ;;; Code:
 
@@ -26,10 +26,17 @@
     tng-overlays (make-hash-table) ; TODO: vector
   "Overlays used in this buffer.")
 
-(defvar-local tng-project-dir "c:/Users/power/dev/tng/")
+(defvar-local tng-project-dir nil
+  "Root of current project.")
 
 (defvar-local tng-db-filename
     (file-name-concat tng-project-dir "tango.sqlite3"))
+
+(defun tng--current-filepath ()
+  "Return relative path for file in current buffer"
+  (file-relative-name
+           (buffer-file-name)
+           (projectile-project-root)))
 
 (defun tng-init-db (&optional dir)
   "Create tng DB in the project root dir."
@@ -93,13 +100,9 @@
 
 ;;; --------------------------------------------------------------------
 
-
 (defun tng-current-chunks ()
-  "Return alist of all chunks in current file."
-  (let* ((filepath
-          (file-relative-name
-           (buffer-file-name)
-           (projectile-project-root)))
+  "Return alists of all chunks in current file."
+  (let* ((filepath (tng--current-filepath))
          (db (sqlite-open tng-db-filename))
          (records (sqlite-select
                   db
@@ -112,24 +115,67 @@
      (lambda (chunk) (cl-pairlis header chunk))
      chunks)))
 
+(defun tng-lines-report (&optional start end)
+  "Return list of meta-info alists for lines from START to END."
+  (let* ((filepath (tng--current-filepath))
+         (db (sqlite-open tng-db-filename))
+         (records (sqlite-select
+                   db
+                   "
+select
+ c.id cid,
+ count(sd.id) sc,
+ count(dd.id) sd,
+ c.start_line csl,
+ c.end_line cel,
+ c.sha1hash csha1,
+ c.comment cc
+from
+ chunk c 
+ left join dep sd on (sd.src = cid)
+ left join dep dd on (dd.dst = cid)
+group by cid
+order by cid
+"
+                   ;;(list start end filepath)
+                   nil
+                   'full))
+         (header (mapcar #'make-symbol (car records)))
+         (records (cdr records)))
+    (mapcar
+     (lambda (record) (cl-pairlis header record))
+     records)))
 
 (defun tng-setup-meta ()
   "Setup the meta-info for each line of the current file."
-  (let ((chunks (tng-current-chunks)))
+  (let* ((current-lines (tng--visible-lines))
+         (line-start (car current-lines))
+         (line-end (cdr current-lines)))
     (save-excursion
-      (progn
-        (dolist ((chunk chunks))
-         (let-alist chunk
-           (goto-line .line)
-           (let* ((ov (make-overlay (point) (point)))
-                  (str (tng-get-margin-str chunk)))
-             (puthash
-              .line
-              (gethash .line tng-overlays ov)
-              tng-overlays)
-             (overlay-put ov 'before-string
-                          (propertize " " 'display
-                                      `((margin right-margin) ,str))))))))))
+      (cl-loop
+       for line from line-start to line-end
+       for chunks = (seq-keep
+                      (lambda (a)
+                        (and
+                         (> line (alist-get "start_line" a nil nil #'equal))
+                         (> (alist-get "end_line" a nil nil #'equal) line)
+                         a))
+                      (tng-current-chunks))
+       do
+       (message "[%s]" chunks)))))
+
+;; (let-alist chunk
+;;            (goto-line .line)
+;;            (let* ((ov (make-overlay (point) (point)))
+;;                   (str (tng-get-margin-str chunk)))
+;;              (puthash
+;;               .line
+;;               (gethash .line tng-overlays ov)
+;;               tng-overlays)
+;;              (overlay-put ov 'before-string
+;;                           (propertize " " 'display
+;;                                       `((margin right-margin) ,str)))))
+
 
 (defun tng-get-margin-str (line-meta-alist)
   "Get tng margin str for line."
@@ -140,8 +186,13 @@
            (face (if (or (> .line 100) (< .line 10)) 'bold 'shadow)))
       (format "%s%s%s]" left-bracket marker right-bracket))))
 
-(defun tng-visible-lines ()
-  "Return start and end")
+(defun tng--visible-lines ()
+  "Return start and end lines of the current buffer's contents
+in current visible window."
+  (save-excursion
+    (cons
+     (line-number-at-pos (goto-char (window-start)))
+     (line-number-at-pos (goto-char (1- (window-end)))))))
 
 (defun tng-goto-next-dst ())
 (defun tng-goto-next-src ())
