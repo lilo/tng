@@ -223,6 +223,20 @@ in current visible window."
 (defun tng-add-src-to-res-under-point ())
 (defun tng-add-dst-to-res-under-point ())
 
+(defvar tng--post-add-region-functions nil
+  "Function to call after new chunk added.
+Takes START and END as arguments.")
+
+(defun tng-highlight-region (begin-line end-line)
+  (save-excursion
+    (let* ((start (prog1 (point) (goto-line begin-line)))
+           (end (prog1 (point) (goto-line end-line))))
+      (pulsar--pulse :no-pulse 'pulsar-face start end)))
+  "Pulse region from BEGIN-LINE to END-LINE.")
+
+(add-to-list 'tng--post-add-region-functions #'tng-highlight-region)
+
+
 (defun tng-add-region (arg begin end)
   "Add new resource from the region.
 If not a region, use current string."
@@ -249,6 +263,9 @@ RETURNING
            (list filepath sha1-hash comment begin-line end-line)
            'full)))
     (setq-local tng--last-added-chunk-id (caadr last-added-chunk))
+    (dolist (fn tng--post-add-region-functions)
+      (funcall fn begin-line end-line)))
+  (deactivate-mark))
 
 (defvar tng-keymap
   (let ((map (make-sparse-keymap)))
