@@ -19,6 +19,12 @@
 (defvar-local tng-db-filename
     (file-name-concat tng-project-dir "tango.sqlite3"))
 
+(defvar-local tng--last-added-chunk-id nil
+  "Last added chunk id.")
+
+(defvar-local tng--effective-chunk-id nil
+  "Current effective chunk id.")
+
 (defun tng--current-filepath ()
   "Return relative path for file in current buffer"
   (file-relative-name
@@ -227,14 +233,20 @@ in current visible window."
               (sha1 (buffer-substring-no-properties begin end))
             (sha1 (thing-at-point 'line t))))
          (filepath (file-relative-name (buffer-file-name) (projectile-project-root)))
-         (comment (if arg (read-from-minibuffer "Comment for this chunk: "))))
-    (sqlite-execute
-     (sqlite-open tng-db-filename)
-     "INSERT \
-INTO chunk(filepath,sha1hash,comment,start_line,end_line) \
-VALUES (?,?,?,?,?)"
-     (list filepath sha1-hash comment begin-line end-line))
-    (deactivate-mark)))
+         (comment (if arg (read-from-minibuffer "Comment for this chunk: ")))
+         (last-added-chunk
+          (sqlite-select
+           (sqlite-open tng-db-filename)
+           "
+INSERT INTO
+ chunk(filepath,sha1hash,comment,start_line,end_line)
+VALUES
+ (?,?,?,?,?)
+RETURNING
+ id"
+           (list filepath sha1-hash comment begin-line end-line)
+           'full)))
+    (setq-local tng--last-added-chunk-id (caadr last-added-chunk))
 
 (defvar tng-keymap
   (let ((map (make-sparse-keymap)))
