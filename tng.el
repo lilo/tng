@@ -17,7 +17,8 @@
   "Root of current project.")
 
 (defvar-local tng-db-filename
-    (file-name-concat tng-project-dir "tango.sqlite3"))
+    (file-name-concat tng-project-dir "tango.sqlite3")
+  "Path to the tng database.")
 
 (defvar-local tng--last-added-chunk-id nil
   "Last added chunk id.")
@@ -223,7 +224,8 @@ in current visible window."
 (defun tng-add-dst-to-res-under-point ())
 
 (defun tng-add-region (arg begin end)
-  "Add new resource from the region"
+  "Add new resource from the region.
+If not a region, use current string."
   (interactive "P\nr")
   (let* ((region (region-active-p))
          (begin-line (line-number-at-pos (if region begin) t))
