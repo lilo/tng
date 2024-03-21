@@ -2,6 +2,7 @@
 ;;; Commentary:
 ;;;
 ;;; TODO:
+;;; don't include last line in the region if empty
 ;;;
 ;;; Code:
 
@@ -108,11 +109,16 @@
           (magit-insert-heading "Chunks: ")
           (dolist (chunk current-chunks)
             (magit-insert-section section (tng-section)
-              (let ((filepath (alist-get 'filepath chunk nil nil #'string-equal))
-                    (start-line (alist-get 'start_line chunk nil nil #'string-equal))
-                    (end-line (alist-get 'end_line chunk nil nil #'string-equal))
+              (let ((filepath
+                     (alist-get 'filepath chunk nil nil #'string-equal))
+                    (start-line
+                     (alist-get 'start_line chunk nil nil #'string-equal))
+                    (end-line
+                     (alist-get 'end_line chunk nil nil #'string-equal))
                     (comment (alist-get 'comment chunk nil nil #'string-equal)))
-                (insert (format "%s[%d:%d] -- %s\n" filepath start-line end-line comment))
+                (insert
+                 (format "%s[%d:%d] -- %s\n"
+                         filepath start-line end-line comment))
                 (oset section filepath filepath)
                 (oset section start-line start-line)
                 (oset section end-line end-line))))))))
@@ -248,7 +254,10 @@ If not a region, use current string."
           (if region
               (sha1 (buffer-substring-no-properties begin end))
             (sha1 (thing-at-point 'line t))))
-         (filepath (file-relative-name (buffer-file-name) (projectile-project-root)))
+         (filepath
+          (file-relative-name
+           (buffer-file-name)
+           (projectile-project-root)))
          (comment (if arg (read-from-minibuffer "Comment for this chunk: ")))
          (last-added-chunk
           (sqlite-select
