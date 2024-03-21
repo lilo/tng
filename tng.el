@@ -239,7 +239,7 @@ VALUES (?,?,?,?,?)"
 (defvar tng-keymap
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "v") #'tng-display-sections)
-    (define-key map (kbd "i") #'tng-mode)
+    (define-key map (kbd "t") #'tng-mode)
     (define-key map (kbd "a") #'tng-add-region)
     map))
 
