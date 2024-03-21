@@ -3,7 +3,7 @@
 ;;;
 ;;; TODO:
 ;;; don't include last line in the region if empty
-;;;
+;;; fix highlight after jump to chunk
 ;;; Code:
 
 (require 'cl-lib)
@@ -65,19 +65,35 @@
   "TNG Buf Major mode"
   :group 'tng)
 
+(defvar tng--post-jump-region-functions nil
+  "Function to call after jumping to chunk.
+Takes START and END as arguments.")
+
+(defun tng-highlight-region (begin-line end-line)
+  (save-excursion
+    (let* ((start (prog1 (point) (goto-line begin-line)))
+           (end (prog1 (point) (goto-line end-line))))
+      (pulsar--pulse :no-pulse 'pulsar-face start end)))
+  "Pulse region from BEGIN-LINE to END-LINE.")
+
+(add-to-list 'tng--post-jump-region-functions #'tng-highlight-region)
+
 (defun tng-jump-to-chunk ()
   "Jump to the chunk"
   (interactive)
   (let* ((current-section (magit-current-section))
          (filepath (oref current-section filepath))
          (start-line (oref current-section start-line))
+         (end-line (oref current-section end-line))
          (buf (find-file-noselect filepath))
          ;; #'pop-to-buffer-same-window)))
          (display-buffer-fn #'switch-to-buffer-other-window))
     (funcall display-buffer-fn buf)
     (with-current-buffer buf
       (widen)
-      (goto-line start-line))))
+      (goto-line start-line)
+      (dolist (fn tng--post-jump-region-functions)
+        (funcall fn start-line end-line)))))
 
 (defvar tng-section-map
   (let ((map (make-sparse-keymap)))
@@ -233,15 +249,7 @@ in current visible window."
   "Function to call after new chunk added.
 Takes START and END as arguments.")
 
-(defun tng-highlight-region (begin-line end-line)
-  (save-excursion
-    (let* ((start (prog1 (point) (goto-line begin-line)))
-           (end (prog1 (point) (goto-line end-line))))
-      (pulsar--pulse :no-pulse 'pulsar-face start end)))
-  "Pulse region from BEGIN-LINE to END-LINE.")
-
 (add-to-list 'tng--post-add-region-functions #'tng-highlight-region)
-
 
 (defun tng-add-region (arg begin end)
   "Add new resource from the region.
