@@ -157,6 +157,19 @@ Takes START and END as arguments.")
      (lambda (chunk) (cl-pairlis header chunk))
      chunks)))
 
+(defun tng--chunk-region (chunk)
+  "Return begin pos and end pos of the CHUNK."
+  (let* (begin end
+         (start-line (alist-get 'start_line chunk nil nil #'string-equal))
+         (end-line (alist-get 'end_line chunk nil nil #'string-equal))
+         (beg end))
+    (save-excursion
+      (goto-line start-line)
+      (beginning-of-line)
+      (setq beg (point))
+      (goto-line end-line)
+      (end-of-line)
+      (cons beg (point)))))
 (defun tng-lines-report (&optional start end)
   "Return list of meta-info alists for lines from START to END."
   (let* ((filepath (tng--current-filepath))
