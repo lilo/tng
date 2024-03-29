@@ -10,8 +10,7 @@
 (require 'magit-section)
 (require 'projectile)
 
-(defvar-local
-    tng-overlays (make-hash-table) ; TODO: vector
+(defvar-local tng-overlays nil
   "Overlays used in this buffer.")
 
 (defvar-local tng-project-dir (projectile-project-root)
