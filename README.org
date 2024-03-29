@@ -1,2 +1,9 @@
 * TNG
-tng-mode for Emacs
+tng-mode for Emacs.
+Keep track of dependencies across your code.
+
+** Overview
+** Keybindings
+| Keys | Command          | Description |
+| a    | `tng-add-region' | Add chunk   |
+|      |                  |             |
