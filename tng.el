@@ -30,17 +30,19 @@
   "Current effective chunk id.")
 
 (defun alist-strget (key alist)
-  "Shortcut for `string-equal' alist-get."
+  "Shortcut for `string-equal' `alist-get'.
+Argument KEY the key.
+Argument ALIST the alist."
   (alist-get key alist nil nil #'string-equal))
 
 (defun tng--current-filepath ()
-  "Return relative path for file in current buffer"
+  "Return relative path for file in current buffer."
   (file-relative-name
            (buffer-file-name)
            (projectile-project-root)))
 
 (defun tng-init-db (&optional dir)
-  "Create tng DB in the project root dir."
+  "Create tng DB in the project root DIR."
   (progn
     (sqlite-execute
      (sqlite-open tng-db-filename)
@@ -68,7 +70,7 @@
 
 
 (define-derived-mode tng-info-mode magit-section-mode "Tng-info"
-  "TNG Buf Major mode"
+  "TNG Buf Major mode."
   :group 'tng)
 
 (defvar tng--post-jump-region-functions nil
@@ -91,7 +93,9 @@ Takes START and END as arguments.")
       (cons start end))))
 
 (defun tng-pulse-region (begin-line end-line)
-  "Pulse the chunk."
+  "Pulse the chunk.
+Argument BEGIN-LINE from that line.
+Argument END-LINE to that."
   (save-excursion
     (let* ((rectangle (tng--line-rectangle begin-line end-line))
            (start (car rectangle))
@@ -102,7 +106,7 @@ Takes START and END as arguments.")
 (add-to-list 'tng--post-jump-region-functions #'tng-pulse-region)
 
 (defun tng-jump-to-chunk ()
-  "Jump to the chunk"
+  "Jump to the chunk."
   (interactive)
   (let* ((current-section (magit-current-section))
          (filepath (oref current-section filepath))
@@ -125,7 +129,7 @@ Takes START and END as arguments.")
     (define-key map (kbd "C-m") #'tng-jump-to-chunk)
     ;; (define-key map [remap revert-buffer] 'org-roam-buffer-refresh)
     map)
-  "Parent keymap")
+  "Parent keymap.")
 
 (defclass tng-section (magit-section)
   ((id :initform nil)
@@ -248,7 +252,8 @@ order by cid
      records)))
 
 (defun tng-get-margin-str (line-meta-alist)
-  "Get tng margin str for line."
+  "Get tng margin str for line.
+Argument LINE-META-ALIST meta alist of the line."
   (let-alist line-meta-alist
     (let* ((left-bracket (propertize "[" 'face 'bold))
            (marker (propertize (if (zerop .status) " " "*") 'face 'bold))
@@ -275,13 +280,14 @@ in current visible window."
   ;; new-chunk-id = tng-add-region begin end
   ;; create dep (src: effective-id dst: new-chunk-id)
   ;; effective-id = new-chunk-id
-  "Create dep. Set active chunk as dest.")
+  "Create dep.  Set active chunk as dest.")
 
 (defun tng-link-set-src ()
-  "Create chunk. Set active chunk as source.")
+  "Create chunk.  Set active chunk as source.")
 
 (defun tng--read-chunks (ids)
-  "Read chunks using completing-read."
+  "Read chunks using `completing-read'.
+Argument IDS ids."
   (interactive
    (list
     (alt-completing-read
@@ -300,7 +306,10 @@ Takes START and END as arguments.")
 
 (defun tng-add-region (arg begin end)
   "Add new resource from the region.
-If not a region, use current string."
+If not a region, use current string.
+Argument ARG arg.
+Argument BEGIN from here.
+Argument END to here."
   (interactive "P\nr")
   (let* ((region (region-active-p))
          (begin-line (line-number-at-pos (if region begin) t))
