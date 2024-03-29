@@ -68,14 +68,14 @@
   "Function to call after jumping to chunk.
 Takes START and END as arguments.")
 
-(defun tng-highlight-region (begin-line end-line)
+(defun tng-pulse-region (begin-line end-line)
   (save-excursion
-    (let* ((start (prog1 (point) (goto-line begin-line)))
-           (end (prog1 (point) (goto-line end-line))))
-      (pulsar--pulse :no-pulse 'pulsar-face start end)))
+    (let* ((start (progn (goto-char (point-min)) (beginning-of-line begin-line) (point)))
+           (end (progn (goto-char (point-min)) (end-of-line end-line) (point))))
+      (pulsar--pulse nil 'pulsar-face start end)))
   "Pulse region from BEGIN-LINE to END-LINE.")
 
-(add-to-list 'tng--post-jump-region-functions #'tng-highlight-region)
+(add-to-list 'tng--post-jump-region-functions #'tng-pulse-region)
 
 (defun tng-jump-to-chunk ()
   "Jump to the chunk"
