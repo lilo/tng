@@ -386,17 +386,10 @@ RETURNING
   :lighter " T"
   (if tng-mode
       (progn
-        (add-hook 'window-scroll-functions 'tng-after-scroll nil t)
         (add-hook 'change-major-mode-hook 'tng-delete-overlays nil t)
-        (add-hook 'window-configuration-change-hook
-                  'tng-update-current nil t)
-        (add-hook 'post-command-hook 'tng-update-current nil t)
         (add-hook 'after-change-functions 'tng-after-change t)
         (tng-update-current))
-    (remove-hook 'post-command-hook 'tng-update-current t)
-    (remove-hook 'window-scroll-functions 'tng-after-scroll t)
     (remove-hook 'after-change-functions 'tng-after-change t)
-    (remove-hook 'window-configuration-change-hook 'tng-update-current t)
     (remove-hook 'change-major-mode-hook 'tng-delete-overlays t)
     (tng-delete-overlays)))
 
