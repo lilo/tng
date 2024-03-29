@@ -29,6 +29,10 @@
 (defvar-local tng--effective-chunk-id nil
   "Current effective chunk id.")
 
+(defun alist-strget (key alist)
+  "Shortcut for `string-equal' alist-get."
+  (alist-get key alist nil nil #'string-equal))
+
 (defun tng--current-filepath ()
   "Return relative path for file in current buffer"
   (file-relative-name
@@ -145,12 +149,12 @@ Takes START and END as arguments.")
           (dolist (chunk current-chunks)
             (magit-insert-section section (tng-section)
               (let ((filepath
-                     (alist-get 'filepath chunk nil nil #'string-equal))
+                     (alist-strget 'filepath chunk))
                     (start-line
-                     (alist-get 'start_line chunk nil nil #'string-equal))
+                     (alist-strget 'start_line chunk))
                     (end-line
-                     (alist-get 'end_line chunk nil nil #'string-equal))
-                    (comment (alist-get 'comment chunk nil nil #'string-equal)))
+                     (alist-strget 'end_line chunk))
+                    (comment (alist-strget 'comment chunk)))
                 (insert
                  (format "%s[%d:%d] -- %s\n"
                          filepath start-line end-line comment))
@@ -179,15 +183,15 @@ Takes START and END as arguments.")
 (defun tng--chunk-region (chunk)
   "Return begin pos and end pos of the CHUNK."
   (let* (begin end
-         (start-line (alist-get 'start_line chunk nil nil #'string-equal))
-         (end-line (alist-get 'end_line chunk nil nil #'string-equal)))
+         (start-line (alist-strget 'start_line chunk))
+         (end-line (alist-strget 'end_line chunk)))
     (tng--line-rectangle start-line end-line)))
 
 (defun tng-make-overlay (chunk)
   "Create overlay from CHUNK alist."
-  (let* ((start-line (alist-get 'start_line chunk nil nil #'string-equal))
-         (end-line (alist-get 'end_line chunk nil nil #'string-equal))
-         (sha1hash (alist-get 'sha1hash chunk nil nil #'string-equal))
+  (let* ((start-line (alist-strget 'start_line chunk))
+         (end-line (alist-strget 'end_line chunk))
+         (sha1hash (alist-strget 'sha1hash chunk))
          (reg (tng--chunk-region chunk))
          (begin (car reg))
          (end (cdr reg))
