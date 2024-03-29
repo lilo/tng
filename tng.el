@@ -23,6 +23,9 @@
 (defvar-local tng--last-added-chunk-id nil
   "Last added chunk id.")
 
+(defvar tng--global-last-added-chunk-id nil
+  "Global last added chunk id.")
+
 (defvar-local tng--effective-chunk-id nil
   "Current effective chunk id.")
 
@@ -373,6 +376,7 @@ RETURNING
            (list filepath sha1-hash comment begin-line end-line)
            'full)))
     (setq-local tng--last-added-chunk-id (caadr last-added-chunk))
+    (setq tng--global-last-added-chunk-id (caadr last-added-chunk))
     (dolist (fn tng--post-add-region-functions)
       (funcall fn begin-line end-line)))
   (deactivate-mark))
