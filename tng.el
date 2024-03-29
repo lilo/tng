@@ -247,38 +247,6 @@ order by cid
      (lambda (record) (cl-pairlis header record))
      records)))
 
-(defun tng-setup-meta ()
-  "Setup the meta-info for each line of the current file."
-  (let* ((current-lines (tng--visible-lines))
-         (line-start (car current-lines))
-         (line-end (cdr current-lines))
-         (current-metainfo (tng-lines-report)))
-    (save-excursion
-      (cl-loop
-       for line from line-start to line-end
-       for chunks = (seq-keep
-                      (lambda (a)
-                        (and
-                         (> line (alist-get 'start_line a nil nil #'equal))
-                         (> (alist-get 'end_line a nil nil #'equal) line)
-                         a))
-                      (tng-current-chunks))
-       do
-       (message "[%s]" chunks)))))
-
-;; (let-alist chunk
-;;            (goto-line .line)
-;;            (let* ((ov (make-overlay (point) (point)))
-;;                   (str (tng-get-margin-str chunk)))
-;;              (puthash
-;;               .line
-;;               (gethash .line tng-overlays ov)
-;;               tng-overlays)
-;;              (overlay-put ov 'before-string
-;;                           (propertize " " 'display
-;;                                       `((margin right-margin) ,str)))))
-
-
 (defun tng-get-margin-str (line-meta-alist)
   "Get tng margin str for line."
   (let-alist line-meta-alist
