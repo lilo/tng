@@ -68,10 +68,27 @@
   "Function to call after jumping to chunk.
 Takes START and END as arguments.")
 
-(defun tng-pulse-region (begin-line end-line)
+(defun tng--line-rectangle (begin-line end-line)
+  "Return bol of BEGIN-LINE and eol of END-LINE."
   (save-excursion
-    (let* ((start (progn (goto-char (point-min)) (beginning-of-line begin-line) (point)))
-           (end (progn (goto-char (point-min)) (end-of-line end-line) (point))))
+    (let* ((start
+            (progn
+              (goto-char (point-min))
+              (beginning-of-line begin-line)
+              (point)))
+           (end
+            (1+
+             (progn
+               (goto-char (point-min))
+               (end-of-line end-line) (point)))))
+      (cons start end))))
+
+(defun tng-pulse-region (begin-line end-line)
+  "Pulse the chunk."
+  (save-excursion
+    (let* ((rectangle (tng--line-rectangle begin-line end-line))
+           (start (car rectangle))
+           (end (cdr rectangle)))
       (pulsar--pulse nil 'pulsar-face start end)))
   "Pulse region from BEGIN-LINE to END-LINE.")
 
@@ -160,15 +177,37 @@ Takes START and END as arguments.")
   "Return begin pos and end pos of the CHUNK."
   (let* (begin end
          (start-line (alist-get 'start_line chunk nil nil #'string-equal))
+         (end-line (alist-get 'end_line chunk nil nil #'string-equal)))
+    (tng--line-rectangle start-line end-line)))
+
+(defun tng-make-overlay (chunk)
+  "Create overlay from CHUNK alist."
+  (let* ((start-line (alist-get 'start_line chunk nil nil #'string-equal))
          (end-line (alist-get 'end_line chunk nil nil #'string-equal))
-         (beg end))
-    (save-excursion
-      (goto-line start-line)
-      (beginning-of-line)
-      (setq beg (point))
-      (goto-line end-line)
-      (end-of-line)
-      (cons beg (point)))))
+         (sha1hash (alist-get 'sha1hash chunk nil nil #'string-equal))
+         (reg (tng--chunk-region chunk))
+         (begin (car reg))
+         (end (cdr reg))
+         (sha1hashfact
+          (sha1 (buffer-substring-no-properties begin end)))
+         (ov (make-overlay begin end))
+         (ov-face
+          (if
+              (string-equal sha1hashfact sha1hash)
+              'highlight
+            'isearch-fail)))
+    (overlay-put ov 'face ov-face)
+    ;; (overlay-put ov 'before-string
+    ;;              (propertize
+    ;;               " " 'display
+    ;;               `(left-fringe right-arrow warning)))
+    ov))
+
+(defun tng-create-overlays ()
+  "Create overlays for chunks in current buffer."
+  (interactive)
+  (setq tng-overlays (mapcar #'tng-make-overlay (tng-current-chunks))))
+
 (defun tng-lines-report (&optional start end)
   "Return list of meta-info alists for lines from START to END."
   (let* ((filepath (tng--current-filepath))
@@ -257,11 +296,32 @@ in current visible window."
 (defun tng-add-src-to-res-under-point ())
 (defun tng-add-dst-to-res-under-point ())
 
+(defun tng-link-set-dst ()
+  ;; new-chunk-id = tng-add-region begin end
+  ;; create dep (src: effective-id dst: new-chunk-id)
+  ;; effective-id = new-chunk-id
+  "Create dep. Set active chunk as dest.")
+
+(defun tng-link-set-src ()
+  "Create chunk. Set active chunk as source.")
+
+(defun tng--read-chunks (ids)
+  "Read chunks using completing-read."
+  (interactive
+   (list
+    (alt-completing-read
+     "Select chunk: "
+     '(("Chunk1" . 1)
+       ("Chunk2" . 2)
+       ("Chunk3" . 3)))))
+  (message "IDS: %s" ids))
+
 (defvar tng--post-add-region-functions nil
   "Function to call after new chunk added.
 Takes START and END as arguments.")
 
-(add-to-list 'tng--post-add-region-functions #'tng-highlight-region)
+(add-to-list 'tng--post-add-region-functions #'tng-pulse-region)
+
 
 (defun tng-add-region (arg begin end)
   "Add new resource from the region.
@@ -269,16 +329,37 @@ If not a region, use current string."
   (interactive "P\nr")
   (let* ((region (region-active-p))
          (begin-line (line-number-at-pos (if region begin) t))
-         (end-line (line-number-at-pos (if region end) t))
-         (sha1-hash
-          (if region
-              (sha1 (buffer-substring-no-properties begin end))
-            (sha1 (thing-at-point 'line t))))
+         (begin-pos (save-excursion
+                      (goto-char (point-min))
+                      (forward-line (1- begin-line))
+                      (beginning-of-line)
+                      (point)))
+         (end-line (line-number-at-pos
+                    (if region
+                        (save-excursion
+                          (progn
+                            (goto-char end)
+                            (when (bolp)
+                              (forward-line -1))
+                            (end-of-line)
+                            (point)))) t))
+         (end-pos (save-excursion
+                      (goto-char (point-min))
+                      (forward-line (1- end-line))
+                      (end-of-line)
+                      (+ 1 (point))))
+         (rectangle (tng--line-rectangle begin-line end-line))
+         (rectangle-string (if region
+              (buffer-substring-no-properties begin-pos end-pos)
+            (thing-at-point 'line t)))
+         (sha1-hash (sha1 rectangle-string))
          (filepath
           (file-relative-name
            (buffer-file-name)
            (projectile-project-root)))
-         (comment (if arg (read-from-minibuffer "Comment for this chunk: ")))
+         (comment
+          (if (not arg)
+              (read-from-minibuffer "Comment for this chunk: ")))
          (last-added-chunk
           (sqlite-select
            (sqlite-open tng-db-filename)
@@ -301,6 +382,7 @@ RETURNING
     (define-key map (kbd "v") #'tng-display-sections)
     (define-key map (kbd "t") #'tng-mode)
     (define-key map (kbd "a") #'tng-add-region)
+    (define-key map (kbd "r") #'tng--read-chunks)
     map))
 
 (global-set-key (kbd "M-t") tng-keymap)
@@ -334,7 +416,6 @@ RETURNING
                   'tng-update-current nil t)
         (add-hook 'post-command-hook 'tng-update-current nil t)
         (add-hook 'after-change-functions 'tng-after-change t)
-        (tng-delete-overlays)
         (tng-update-current))
     (remove-hook 'post-command-hook 'tng-update-current t)
     (remove-hook 'window-scroll-functions 'tng-after-scroll t)
@@ -359,23 +440,24 @@ RETURNING
   "Tng update BUFFER."
   (with-current-buffer buffer
     (when tng-mode
-        (maphash (lambda (k v) (delete-overlay v)) tng-overlays)
-        (clrhash tng-overlays)
-        (mapc #'tng-update-window
-              (get-buffer-window-list buffer nil 'visible)))))
-
+      (tng-delete-overlays)
+      (tng-create-overlays)
+      (mapc #'tng-update-window
+            (get-buffer-window-list buffer nil 'visible)))))
 
 (defun tng-delete-overlays ()
   "Delete tng overlays."
-  (maphash (lambda (k v) (delete-overlay v)) tng-overlays)
-  (clrhash tng-overlays)
-  (dolist (w (get-buffer-window-list (current-buffer) nil t))
-    (let ((set-margins (window-parameter w 'tng--set-margins))
-          (current-margins (window-margins w)))
-      (when (and set-margins
-                 (equal set-margins current-margins))
-        (set-window-margins w (car current-margins) 0)
-        (set-window-parameter w 'tng--set-margins nil)))))
+  (dolist (ov tng-overlays)
+    (delete-overlay ov))
+  (setq tng-overlays nil))
+
+  ;; (dolist (w (get-buffer-window-list (current-buffer) nil t))
+  ;;   (let ((set-margins (window-parameter w 'tng--set-margins))
+  ;;         (current-margins (window-margins w)))
+  ;;     (when (and set-margins
+  ;;                (equal set-margins current-margins))
+  ;;       (set-window-margins w (car current-margins) 0)
+  ;;       (set-window-parameter w 'tng--set-margins nil)))))
 
 
 (defun tng-update-current ()
@@ -395,17 +477,17 @@ RETURNING
 
 (defun tng-update-window (win)
   "Set window margins in window WIN."
-  (tng-setup-meta)
-  (let ((width 3)
-        (existing-margins (window-margins win)))
-    (progn
-      (when (display-graphic-p)
-        (setq width (ceiling
-                     (/ (* width 1.0 (tng--face-width 'default))
-                        (frame-char-width)))))
-      (when (> width (or (cdr existing-margins) 0))
-        (set-window-margins win (car existing-margins) width)
-        (set-window-parameter win 'tng--set-margins (window-margins win))))))
+  ;; (let ((width 3)
+  ;;       (existing-margins (window-margins win)))
+  ;;   (progn
+  ;;     (when (display-graphic-p)
+  ;;       (setq width (ceiling
+  ;;                    (/ (* width 1.0 (tng--face-width 'default))
+  ;;                       (frame-char-width)))))
+  ;;     (when (> width (or (cdr existing-margins) 0))
+  ;;       (set-window-margins win (car existing-margins) width)
+  ;;       (set-window-parameter win 'tng--set-margins (window-margins win)))))
+  )
 
 (provide 'tng)
 ;;; tng.el ends here
