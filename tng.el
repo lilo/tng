@@ -205,20 +205,30 @@ Argument END-LINE to that."
          (end (cdr reg))
          (sha1hashfact
           (sha1 (buffer-substring-no-properties begin end)))
-         (ov-face
-          (if
-              (string-equal sha1hashfact sha1hash)
-              'highlight
-            'isearch-fail))
+         (diff-flag (not (string-equal sha1hashfact sha1hash)))
          (ov (gethash
                 chunk-id tng--overlays-hash-table
-                (make-overlay begin end))))
+                (make-overlay begin end)))
+         (ov-sha1hash
+          (sha1
+           (buffer-substring-no-properties
+            (overlay-start ov)
+            (overlay-end ov))))
+         (moved-flag (not (string-equal sha1hash ov-sha1hash)))
+         (ov-face
+          (cond (moved-flag 'diff-refine-changed)
+                (diff-flag 'diff-refine-removed)
+                (t 'highlight)))
+         (left-fringe
+          (cond (moved-flag `(left-fringe up-arrow shr-mark))
+                (diff-flag `(left-fringe question-mark dired-flagged))
+                (t `(left-fringe large-circle shadow)))))
     (overlay-put ov 'tng-chunk-id chunk-id)
     (overlay-put ov 'face ov-face)
     (overlay-put ov 'before-string
                  (propertize
                   " " 'display
-                  `(left-fringe right-arrow warning)))
+                  left-fringe))
     ov))
 
 (defun tng-create-overlays ()
