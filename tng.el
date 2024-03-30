@@ -420,11 +420,6 @@ RETURNING
             (string-search "\n" (buffer-substring-no-properties beg end)))
     (tng-update-current)))
 
-(defun tng-after-scroll (win _start)
-  "Tng after scroll WIN _START."
-  (tng-update (window-buffer win)))
-
-
 (defun tng-update (buffer)
   "Tng update BUFFER."
   (with-current-buffer buffer
