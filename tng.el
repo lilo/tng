@@ -431,10 +431,6 @@ RETURNING
    tng--overlays-hash-table)
   (clrhash tng--overlays-hash-table))
 
-(defun tng-update-current ()
-    "Tng update current."
-  (tng-update (current-buffer)))
-
 (declare-function font-info "font.c" (name &optional frame))
 
 (defun tng--face-width (face)
@@ -445,20 +441,6 @@ RETURNING
     (if (<= width 0)
         (setq width (aref info 10)))
     width))
-
-(defun tng-update-window (win)
-  "Set window margins in window WIN."
-  ;; (let ((width 3)
-  ;;       (existing-margins (window-margins win)))
-  ;;   (progn
-  ;;     (when (display-graphic-p)
-  ;;       (setq width (ceiling
-  ;;                    (/ (* width 1.0 (tng--face-width 'default))
-  ;;                       (frame-char-width)))))
-  ;;     (when (> width (or (cdr existing-margins) 0))
-  ;;       (set-window-margins win (car existing-margins) width)
-  ;;       (set-window-parameter win 'tng--set-margins (window-margins win)))))
-  )
 
 (provide 'tng)
 ;;; tng.el ends here
