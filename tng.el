@@ -386,20 +386,6 @@ RETURNING
   "Track deps."
   :group 'convenience)
 
-(defface tng-shadow
-  '(
-    (t :inherit (shadow default))
-    )
-  "Face for displaying tng status in the display margin."
-  :group 'tng)
-
-(defface tng-highlight
-  '(
-    (t :inherit (highlight default))
-    )
-  "Face for displaying tng status in the display margin."
-  :group 'tng)
-
 (define-minor-mode tng-mode
   "Tango mode."
   :lighter " T"
