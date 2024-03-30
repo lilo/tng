@@ -13,6 +13,9 @@
 (defvar-local tng-overlays nil
   "Overlays used in this buffer.")
 
+(defvar-local tng--overlays-hash-table nil
+  "The hash-table.")
+
 (defvar-local tng-project-dir (projectile-project-root)
   "Root of current project.")
 
@@ -193,7 +196,8 @@ Argument END-LINE to that."
 
 (defun tng-make-overlay (chunk)
   "Create overlay from CHUNK alist."
-  (let* ((start-line (alist-strget 'start_line chunk))
+  (let* ((chunk-id (alist-strget 'id chunk))
+         (start-line (alist-strget 'start_line chunk))
          (end-line (alist-strget 'end_line chunk))
          (sha1hash (alist-strget 'sha1hash chunk))
          (reg (tng--chunk-region chunk))
@@ -201,23 +205,29 @@ Argument END-LINE to that."
          (end (cdr reg))
          (sha1hashfact
           (sha1 (buffer-substring-no-properties begin end)))
-         (ov (make-overlay begin end))
          (ov-face
           (if
               (string-equal sha1hashfact sha1hash)
               'highlight
-            'isearch-fail)))
+            'isearch-fail))
+         (ov (gethash
+                chunk-id tng--overlays-hash-table
+                (make-overlay begin end))))
+    (overlay-put ov 'tng-chunk-id chunk-id)
     (overlay-put ov 'face ov-face)
-    ;; (overlay-put ov 'before-string
-    ;;              (propertize
-    ;;               " " 'display
-    ;;               `(left-fringe right-arrow warning)))
+    (overlay-put ov 'before-string
+                 (propertize
+                  " " 'display
+                  `(left-fringe right-arrow warning)))
     ov))
 
 (defun tng-create-overlays ()
   "Create overlays for chunks in current buffer."
   (interactive)
-  (setq tng-overlays (mapcar #'tng-make-overlay (tng-current-chunks))))
+  (dolist (chunk (tng-current-chunks))
+    (let* ((ov (tng-make-overlay chunk))
+          (chunk-id (overlay-get ov 'tng-chunk-id)))
+      (puthash chunk-id ov tng--overlays-hash-table))))
 
 (defun tng-lines-report (&optional start end)
   "Return list of meta-info alists for lines from START to END."
@@ -395,6 +405,7 @@ RETURNING
   :lighter " T"
   (if tng-mode
       (progn
+        (setq tng--overlays-hash-table (make-hash-table))
         (add-hook 'change-major-mode-hook 'tng-delete-overlays nil t)
         (add-hook 'after-change-functions 'tng-after-change t)
         (tng-update-current))
@@ -418,25 +429,16 @@ RETURNING
   "Tng update BUFFER."
   (with-current-buffer buffer
     (when tng-mode
-      (tng-delete-overlays)
       (tng-create-overlays)
       (mapc #'tng-update-window
             (get-buffer-window-list buffer nil 'visible)))))
 
 (defun tng-delete-overlays ()
   "Delete tng overlays."
-  (dolist (ov tng-overlays)
-    (delete-overlay ov))
-  (setq tng-overlays nil))
-
-  ;; (dolist (w (get-buffer-window-list (current-buffer) nil t))
-  ;;   (let ((set-margins (window-parameter w 'tng--set-margins))
-  ;;         (current-margins (window-margins w)))
-  ;;     (when (and set-margins
-  ;;                (equal set-margins current-margins))
-  ;;       (set-window-margins w (car current-margins) 0)
-  ;;       (set-window-parameter w 'tng--set-margins nil)))))
-
+  (maphash
+   (lambda (k v) (delete-overlay v))
+   tng--overlays-hash-table)
+  (clrhash tng--overlays-hash-table))
 
 (defun tng-update-current ()
     "Tng update current."
