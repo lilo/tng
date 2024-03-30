@@ -431,16 +431,5 @@ RETURNING
    tng--overlays-hash-table)
   (clrhash tng--overlays-hash-table))
 
-(declare-function font-info "font.c" (name &optional frame))
-
-(defun tng--face-width (face)
-  "Tng face width FACE."
-  (let ((info (font-info (face-font face)))
-        width)
-    (setq width (aref info 11))
-    (if (<= width 0)
-        (setq width (aref info 10)))
-    width))
-
 (provide 'tng)
 ;;; tng.el ends here
