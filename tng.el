@@ -13,7 +13,7 @@
 (defvar-local tng-overlays nil
   "Overlays used in this buffer.")
 
-(defvar-local tng--overlays-hash-table nil
+(defvar-local tng--overlays-hash-table (make-hash-table)
   "The hash-table.")
 
 (defvar-local tng-project-dir (projectile-project-root)
