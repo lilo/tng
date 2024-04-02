@@ -195,7 +195,7 @@ Argument END-LINE to that."
     (tng--line-rectangle start-line end-line)))
 
 (defun tng-make-overlay (chunk)
-  "Create overlay from CHUNK alist."
+  "Create/update overlay from CHUNK alist."
   (let* ((chunk-id (alist-strget 'id chunk))
          (start-line (alist-strget 'start_line chunk))
          (end-line (alist-strget 'end_line chunk))
@@ -206,30 +206,49 @@ Argument END-LINE to that."
          (sha1hashfact
           (sha1 (buffer-substring-no-properties begin end)))
          (diff-flag (not (string-equal sha1hashfact sha1hash)))
-         (ov (gethash
-                chunk-id tng--overlays-hash-table
-                (make-overlay begin end)))
-         (ov-sha1hash
+         (ov-in-overlays-table
+          (gethash
+           chunk-id tng--overlays-hash-table))
+         (ov
+          (or
+           ov-in-overlays-table
+           (make-overlay begin end)))
+         (ov-begin-marker
+          (or
+           (overlay-get ov 'tng-begin-marker) 
+           (prog1 (setq marker (make-marker)) (set-marker marker begin))))
+         (ov-end-marker
+          (or
+           (overlay-get ov 'tng-end-marker)
+           (prog1 (setq marker (make-marker)) (set-marker marker end))))
+         (ov-markers-sha1
           (sha1
            (buffer-substring-no-properties
-            (overlay-start ov)
-            (overlay-end ov))))
-         (moved-flag (not (string-equal sha1hash ov-sha1hash)))
+            ov-begin-marker ov-end-marker)))
+         (moved-flag
+          (and
+           diff-flag
+           (string-equal ov-markers-sha1 sha1hash)))
          (ov-face
           (cond (moved-flag 'diff-refine-changed)
                 (diff-flag 'diff-refine-removed)
                 (t 'highlight)))
          (left-fringe
-          (cond (moved-flag `(left-fringe up-arrow shr-mark))
-                (diff-flag `(left-fringe question-mark dired-flagged))
-                (t `(left-fringe large-circle shadow)))))
-    (overlay-put ov 'tng-chunk-id chunk-id)
-    (overlay-put ov 'face ov-face)
-    (overlay-put ov 'before-string
-                 (propertize
-                  " " 'display
-                  left-fringe))
-    ov))
+          (cond (moved-flag '(left-fringe up-arrow shr-mark))
+                (diff-flag '(left-fringe question-mark dired-flagged))
+                (t '(left-fringe large-circle shadow)))))
+    (prog1 ov
+      (overlay-put ov 'tng-chunk-id chunk-id)
+      (overlay-put ov 'tng-moved-flag moved-flag)
+      (overlay-put ov 'tng-start-line start-line)
+      (overlay-put ov 'tng-end-line end-line)
+      (overlay-put ov 'tng-begin-marker ov-begin-marker)
+      (overlay-put ov 'tng-end-marker ov-end-marker)
+      (overlay-put ov 'face ov-face)
+      (overlay-put ov 'before-string
+                   (propertize
+                    " " 'display
+                    left-fringe)))))
 
 (defun tng-create-overlays ()
   "Create overlays for chunks in current buffer."
@@ -401,28 +420,17 @@ RETURNING
   :lighter " T"
   (if tng-mode
       (progn
-        (setq tng--overlays-hash-table (make-hash-table))
         (add-hook 'change-major-mode-hook 'tng-delete-overlays nil t)
-        (add-hook 'after-change-functions 'tng-after-change t)
-        (tng-update-current))
+        (add-hook 'after-change-functions 'tng-after-change t t)
+        (tng-create-overlays))
     (remove-hook 'after-change-functions 'tng-after-change t)
     (remove-hook 'change-major-mode-hook 'tng-delete-overlays t)
     (tng-delete-overlays)))
 
 (defun tng-after-change (beg end _len)
-  "Update overlays on deletions, and after newlines are inserted BEG END _LEN."
-  (when (or (= beg end)
-            (= end (point-max))
-            (string-search "\n" (buffer-substring-no-properties beg end)))
-    (tng-update-current)))
-
-(defun tng-update (buffer)
-  "Tng update BUFFER."
-  (with-current-buffer buffer
-    (when tng-mode
-      (tng-create-overlays)
-      (mapc #'tng-update-window
-            (get-buffer-window-list buffer nil 'visible)))))
+  "Update overlays on deletions,
+and after newlines are inserted BEG END _LEN."
+  (tng-create-overlays))
 
 (defun tng-delete-overlays ()
   "Delete tng overlays."
