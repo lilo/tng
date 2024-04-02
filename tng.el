@@ -388,5 +388,39 @@ and after newlines are inserted BEG END _LEN."
    tng--overlays-hash-table)
   (clrhash tng--overlays-hash-table))
 
+;;;;;;;;;;;;;
+
+(defun tng-list-chunks-refresh ()
+  "Refresh list of chunks."
+  (let ((entry (list
+                'chunk1
+                [("1") ("tng.el") ("9:12") ("Requirements")])))
+    (setq tabulated-list-entries (list entry))
+    (tabulated-list-init-header)
+    (tabulated-list-print)))
+
+(define-derived-mode tng-list-chunks-mode tabulated-list-mode "tng-list-chunk-mode"
+  "Major mode for listing chunks"
+  (setq truncate-lines t)
+  (setq buffer-read-only t)
+  (setq tabulated-list-format [("id" 4 t)
+			       ("filename" 12 t)
+                               ("pos" 8 t)
+			       ("comment"  25 t)])
+  (setq tabulated-list-sort-key (cons "filename" nil))
+  (add-hook 'tabulated-list-revert-hook #'tng-list-chunks-refresh nil t))
+
+(put 'bookmark-bmenu-mode 'mode-class 'special)
+
+(defun tng-list-chunks ()
+  "Display a list of existing chunks."
+  (interactive)
+  (let ((buf (get-buffer-create "* TNG chunks*")))
+    (if (called-interactively-p 'interactive)
+        (switch-to-buffer buf)
+      (set-buffer buf)))
+  (tng-list-chunks-mode)
+  (tng-list-chunks-refresh))
+
 (provide 'tng)
 ;;; tng.el ends here
