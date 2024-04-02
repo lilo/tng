@@ -186,6 +186,21 @@ Argument END-LINE to that."
      (lambda (chunk) (cl-pairlis header chunk))
      chunks)))
 
+(defun tng-project-chunks ()
+  "Return alists of all chunks (in current project)."
+  (let* ((db (sqlite-open tng-db-filename))
+         (records (sqlite-select
+                  db
+                  "select id,filepath,start_line,end_line,comment,sha1hash from chunk"
+                  nil
+                  'full))
+         (header (mapcar #'make-symbol (car records)))
+         (chunks (cdr records)))
+    (mapcar
+     (lambda (chunk) (cl-pairlis header chunk))
+     chunks)))
+
+
 (defun tng--chunk-region (chunk)
   "Return begin pos and end pos of the CHUNK."
   (let* (begin end
@@ -393,10 +408,20 @@ and after newlines are inserted BEG END _LEN."
 
 (defun tng-list-chunks-refresh ()
   "Refresh list of chunks."
-  (let ((entry (list
-                'chunk1
-                [("1") ("tng.el") ("9:12") ("Requirements")])))
-    (setq tabulated-list-entries (list entry))
+  (let* ((chunks (tng-project-chunks)))
+    (cl-flet
+        ((tabulate-chunk (chunk)
+           (let* ((id (number-to-string
+                       (alist-strget 'id chunk)))
+                  (fname (alist-strget 'filepath chunk))
+                  (start (alist-strget 'start_line chunk))
+                  (end (alist-strget 'end_line chunk))
+                  (pos (format "%s:%s" start end))
+                  (comment (alist-strget 'comment chunk)))
+             (list
+              id
+              (vector (list id) (list fname) (list pos) (list comment))))))
+      (setq tabulated-list-entries (mapcar #'tabulate-chunk chunks)))
     (tabulated-list-init-header)
     (tabulated-list-print)))
 
