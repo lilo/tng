@@ -2,8 +2,7 @@
 ;;; Commentary:
 ;;;
 ;;; TODO:
-;;; don't include last line in the region if empty
-;;; fix highlight after jump to chunk
+;;; rename start/begin
 ;;; Code:
 
 (require 'cl-lib)
@@ -22,6 +21,11 @@
 (defvar-local tng-db-filename
     (file-name-concat tng-project-dir "tango.sqlite3")
   "Path to the tng database.")
+
+(defcustom tng-auto-fix-moved-chunks t
+  "Auto-fix and auto-update moved chunks."
+  :group 'tng
+  :type 'boolean)
 
 (defvar-local tng--last-added-chunk-id nil
   "Last added chunk id.")
@@ -197,7 +201,7 @@ Argument END-LINE to that."
 (defun tng-make-overlay (chunk)
   "Create/update overlay from CHUNK alist."
   (let* ((chunk-id (alist-strget 'id chunk))
-         (start-line (alist-strget 'start_line chunk))
+         (begin-line (alist-strget 'start_line chunk))
          (end-line (alist-strget 'end_line chunk))
          (sha1hash (alist-strget 'sha1hash chunk))
          (reg (tng--chunk-region chunk))
@@ -215,8 +219,10 @@ Argument END-LINE to that."
            (make-overlay begin end)))
          (ov-begin-marker
           (or
-           (overlay-get ov 'tng-begin-marker) 
-           (prog1 (setq marker (make-marker)) (set-marker marker begin))))
+           (overlay-get ov 'tng-begin-marker)
+           (prog1
+               (setq marker (make-marker))
+             (set-marker marker begin))))
          (ov-end-marker
           (or
            (overlay-get ov 'tng-end-marker)
@@ -240,8 +246,8 @@ Argument END-LINE to that."
     (prog1 ov
       (overlay-put ov 'tng-chunk-id chunk-id)
       (overlay-put ov 'tng-moved-flag moved-flag)
-      (overlay-put ov 'tng-start-line start-line)
-      (overlay-put ov 'tng-end-line end-line)
+      (overlay-put ov 'tng-begin-line (line-number-at-pos ov-begin-marker))
+      (overlay-put ov 'tng-end-line (1- (line-number-at-pos ov-end-marker))) ;; TODO: line num
       (overlay-put ov 'tng-begin-marker ov-begin-marker)
       (overlay-put ov 'tng-end-marker ov-end-marker)
       (overlay-put ov 'face ov-face)
@@ -249,6 +255,19 @@ Argument END-LINE to that."
                    (propertize
                     " " 'display
                     left-fringe)))))
+
+(defun tng-auto-fix-moved ()
+  "Update moved chunks' start-line and end-line."
+  (dolist (k (hash-table-keys tng--overlays-hash-table))
+    (let ((ov (gethash k tng--overlays-hash-table)))
+      (when (overlay-get ov 'tng-moved-flag)
+        (let ((chunk-id (overlay-get ov 'tng-chunk-id))
+              (begin-line (overlay-get ov 'tng-begin-line))
+              (end-line (overlay-get ov 'tng-end-line)))              
+          (tng--update-chunk-begin-end-lines chunk-id begin-line end-line)
+          (overlay-put ov 'tng-moved-flag nil)
+          (overlay-put ov 'tng-begin-marker nil)
+          (overlay-put ov 'tng-end-marker nil))))))
 
 (defun tng-create-overlays ()
   "Create overlays for chunks in current buffer."
@@ -401,6 +420,21 @@ RETURNING
       (funcall fn begin-line end-line)))
   (deactivate-mark))
 
+(defun tng--update-chunk-begin-end-lines (chunk-id begin-line end-line)
+  "Update BEGIN-LINE and END-LINE for chunk where id = CHUNK-ID"
+  (let ((ov (gethash chunk-id tng--overlays-hash-table)))
+    (sqlite-select
+     (sqlite-open tng-db-filename)
+     "
+UPDATE chunk
+SET start_line = ?,
+    end_line = ?
+WHERE id = ?
+RETURNING
+ id"
+     (list begin-line end-line chunk-id)
+     nil)))
+
 (defvar tng-keymap
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "v") #'tng-display-sections)
@@ -430,7 +464,10 @@ RETURNING
 (defun tng-after-change (beg end _len)
   "Update overlays on deletions,
 and after newlines are inserted BEG END _LEN."
-  (tng-create-overlays))
+  (tng-create-overlays)
+  (when tng-auto-fix-moved-chunks
+    (tng-auto-fix-moved))
+    (tng-create-overlays))
 
 (defun tng-delete-overlays ()
   "Delete tng overlays."
