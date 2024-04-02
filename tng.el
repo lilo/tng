@@ -3,6 +3,7 @@
 ;;; TODO:
 ;;; rename start/begin
 ;;; rename start_line, end_line
+;;; `#'tng-list-chunks-jump' keymap
 ;;; Code:
 
 (require 'cl-lib)
@@ -373,6 +374,7 @@ RETURNING
     (define-key map (kbd "t") #'tng-mode)
     (define-key map (kbd "a") #'tng-add-region)
     (define-key map (kbd "r") #'tng--read-chunks)
+    (define-key map (kbd "l") #'tng-list-chunks)
     map))
 
 (global-set-key (kbd "M-t") tng-keymap)
@@ -419,14 +421,42 @@ and after newlines are inserted BEG END _LEN."
                   (pos (format "%s:%s" start end))
                   (comment (alist-strget 'comment chunk)))
              (list
-              id
+              chunk
               (vector (list id) (list fname) (list pos) (list comment))))))
       (setq tabulated-list-entries (mapcar #'tabulate-chunk chunks)))
     (tabulated-list-init-header)
     (tabulated-list-print)))
 
-(define-derived-mode tng-list-chunks-mode tabulated-list-mode "tng-list-chunk-mode"
-  "Major mode for listing chunks"
+(defun tng-list-chunks-jump ()
+  "Jump to the chunk."
+  (interactive)
+  (let* ((chunk (tabulated-list-get-id))
+         (filepath (alist-strget 'filepath chunk))
+         (start-line (alist-strget 'start_line chunk))
+         (end-line (alist-strget 'end_line chunk))
+         (buf (find-file-noselect filepath))
+         ;; #'pop-to-buffer-same-window)))
+         (display-buffer-fn #'switch-to-buffer-other-window))
+    (funcall display-buffer-fn buf)
+    (with-current-buffer buf
+      (widen)
+      (goto-line start-line)
+      (dolist (fn tng--post-jump-region-functions)
+        (funcall fn start-line end-line)))))
+
+;; (defvar-keymap tng-list-chunks-mode-map
+;;   :doc "Keymap for `tng-list-chunks-mode'."
+;;   :parent tabulated-list-mode-map
+;;   "C-m" #'tng-list-chunks-jump)
+
+(defvar tng-list-chunks-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'tng-list-chunks-jump)
+    (define-key map (kbd "C-m") #'tng-list-chunks-jump)
+    map))
+
+(define-derived-mode tng-list-chunks-mode tabulated-list-mode "tng-list-chunks-mode"
+  "Major mode for listing chunks."
   (setq truncate-lines t)
   (setq buffer-read-only t)
   (setq tabulated-list-format [("id" 4 t)
@@ -436,7 +466,7 @@ and after newlines are inserted BEG END _LEN."
   (setq tabulated-list-sort-key (cons "filename" nil))
   (add-hook 'tabulated-list-revert-hook #'tng-list-chunks-refresh nil t))
 
-(put 'bookmark-bmenu-mode 'mode-class 'special)
+(put 'tng-list-chunks-mode 'mode-class 'special)
 
 (defun tng-list-chunks ()
   "Display a list of existing chunks."

@@ -22,6 +22,7 @@ Keep track of dependencies across your code.
    - plain text
    - no need for any modifications of existing codebase
    - auto-fix chunks moved by inserting lines above
+   - tabulated mode
 
 ** Keybindings
 | Keys | Command          | Description |
