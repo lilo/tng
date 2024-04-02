@@ -416,11 +416,9 @@ and after newlines are inserted BEG END _LEN."
   "Display a list of existing chunks."
   (interactive)
   (let ((buf (get-buffer-create "* TNG chunks*")))
-    (if (called-interactively-p 'interactive)
-        (switch-to-buffer buf)
-      (set-buffer buf)))
-  (tng-list-chunks-mode)
-  (tng-list-chunks-refresh))
+    (switch-to-buffer buf)
+    (tng-list-chunks-mode)
+    (tng-list-chunks-refresh)))
 
 (provide 'tng)
 ;;; tng.el ends here
