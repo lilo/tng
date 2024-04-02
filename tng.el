@@ -1,6 +1,5 @@
 ;;; package --- tng.el -*- lexical-binding:t; coding:utf-8 -*-
 ;;; Commentary:
-;;;
 ;;; TODO:
 ;;; rename start/begin
 ;;; Code:
@@ -8,9 +7,6 @@
 (require 'cl-lib)
 (require 'magit-section)
 (require 'projectile)
-
-(defvar-local tng-overlays nil
-  "Overlays used in this buffer.")
 
 (defvar-local tng--overlays-hash-table (make-hash-table)
   "The hash-table.")
@@ -21,6 +17,10 @@
 (defvar-local tng-db-filename
     (file-name-concat tng-project-dir "tango.sqlite3")
   "Path to the tng database.")
+
+(defgroup tng nil
+  "Track deps."
+  :group 'convenience)
 
 (defcustom tng-auto-fix-moved-chunks t
   "Auto-fix and auto-update moved chunks."
@@ -71,10 +71,6 @@ Argument ALIST the alist."
 	FOREIGN KEY(\"src\") REFERENCES \"chunk\"(\"id\"),
 	PRIMARY KEY(\"id\" AUTOINCREMENT),
 	FOREIGN KEY(\"dst\") REFERENCES \"chunk\"(\"id\"));")))
-
-
-;;; MAGIT
-
 
 (define-derived-mode tng-info-mode magit-section-mode "Tng-info"
   "TNG Buf Major mode."
@@ -132,9 +128,7 @@ Argument END-LINE to that."
 (defvar tng-section-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map magit-section-mode-map)
-    ;; (define-key map (kbd "C-m") #'pulsar-pulse-line)
     (define-key map (kbd "C-m") #'tng-jump-to-chunk)
-    ;; (define-key map [remap revert-buffer] 'org-roam-buffer-refresh)
     map)
   "Parent keymap.")
 
@@ -277,84 +271,6 @@ Argument END-LINE to that."
           (chunk-id (overlay-get ov 'tng-chunk-id)))
       (puthash chunk-id ov tng--overlays-hash-table))))
 
-(defun tng-lines-report (&optional start end)
-  "Return list of meta-info alists for lines from START to END."
-  (let* ((filepath (tng--current-filepath))
-         (db (sqlite-open tng-db-filename))
-         (records (sqlite-select
-                   db
-                   "
-select
- c.id cid,
- count(sd.id) sc,
- count(dd.id) sd,
- c.filepath cf,
- c.start_line csl,
- c.end_line cel,
- c.sha1hash csha1,
- c.comment cc
-from
- chunk c
- left join dep sd on (sd.src = cid)
- left join dep dd on (dd.dst = cid)
-group by cid
-order by cid
-"
-                   ;;(list start end filepath)
-                   nil
-                   'full))
-         (header (mapcar #'make-symbol (car records)))
-         (records (cdr records)))
-    (mapcar
-     (lambda (record) (cl-pairlis header record))
-     records)))
-
-(defun tng-get-margin-str (line-meta-alist)
-  "Get tng margin str for line.
-Argument LINE-META-ALIST meta alist of the line."
-  (let-alist line-meta-alist
-    (let* ((left-bracket (propertize "[" 'face 'bold))
-           (marker (propertize (if (zerop .status) " " "*") 'face 'bold))
-           (right-bracket (propertize "]" 'face 'bold))
-           (face (if (or (> .line 100) (< .line 10)) 'bold 'shadow)))
-      (format "%s%s%s]" left-bracket marker right-bracket))))
-
-(defun tng--visible-lines ()
-  "Return start and end lines of the current buffer's contents
-in current visible window."
-  (save-excursion
-    (cons
-     (line-number-at-pos (goto-char (window-start)))
-     (line-number-at-pos (goto-char (1- (window-end)))))))
-
-(defun tng-goto-next-dst ())
-(defun tng-goto-next-src ())
-(defun tng-show-pop-up ())
-(defun tng-save-current-lines ())
-(defun tng-add-src-to-res-under-point ())
-(defun tng-add-dst-to-res-under-point ())
-
-(defun tng-link-set-dst ()
-  ;; new-chunk-id = tng-add-region begin end
-  ;; create dep (src: effective-id dst: new-chunk-id)
-  ;; effective-id = new-chunk-id
-  "Create dep.  Set active chunk as dest.")
-
-(defun tng-link-set-src ()
-  "Create chunk.  Set active chunk as source.")
-
-(defun tng--read-chunks (ids)
-  "Read chunks using `completing-read'.
-Argument IDS ids."
-  (interactive
-   (list
-    (alt-completing-read
-     "Select chunk: "
-     '(("Chunk1" . 1)
-       ("Chunk2" . 2)
-       ("Chunk3" . 3)))))
-  (message "IDS: %s" ids))
-
 (defvar tng--post-add-region-functions nil
   "Function to call after new chunk added.
 Takes START and END as arguments.")
@@ -444,10 +360,6 @@ RETURNING
     map))
 
 (global-set-key (kbd "M-t") tng-keymap)
-
-(defgroup tng nil
-  "Track deps."
-  :group 'convenience)
 
 (define-minor-mode tng-mode
   "Tango mode."
