@@ -3,6 +3,26 @@ tng-mode for Emacs.
 Keep track of dependencies across your code.
 
 ** Overview
+   - a chunk is determined by start-line and end-line
+   - a dep links two chunks, upstream and downstream
+   - create chunk from a region or a line
+   - visual indicator of modified upstreams
+   - chunk's state indicator
+   - fringe indicator
+   - highlight indicator
+   - number of ups
+   - number of downs
+   - triggered by up
+   - triggered downs
+   - add dep mode
+   - chunks-at-point
+   - delete-chunk
+   - unlink chunks
+   - language agnostic
+   - plain text
+   - no need for any modifications of existing codebase
+   - auto-fix chunks moved by inserting lines above
+
 ** Keybindings
 | Keys | Command          | Description |
 | a    | `tng-add-region' | Add chunk   |
