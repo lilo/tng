@@ -422,7 +422,12 @@ and after newlines are inserted BEG END _LEN."
                   (comment (alist-strget 'comment chunk)))
              (list
               chunk
-              (vector (list id) (list fname) (list pos) (list comment))))))
+              (vector
+               (list
+                id
+                'face 'default
+                'action (lambda (_button) (tng-list-chunks-jump)))
+               (list fname) (list pos) (list comment))))))
       (setq tabulated-list-entries (mapcar #'tabulate-chunk chunks)))
     (tabulated-list-init-header)
     (tabulated-list-print)))
@@ -456,7 +461,9 @@ and after newlines are inserted BEG END _LEN."
     map))
 
 (define-derived-mode tng-list-chunks-mode tabulated-list-mode "tng-list-chunks-mode"
-  "Major mode for listing chunks."
+  "Major mode for listing chunks.
+\\<tng-list-chunks-mode-map>
+\\{tng-list-chunks-mode-map}"
   (setq truncate-lines t)
   (setq buffer-read-only t)
   (setq tabulated-list-format [("id" 4 t)
