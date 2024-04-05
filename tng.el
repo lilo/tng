@@ -5,7 +5,7 @@
 ;;; rename start_line, end_line
 ;;; `#'tng-list-chunks-jump' keymap
 ;;; Code:
-
+
 (require 'cl-lib)
 (require 'magit-section)
 (require 'projectile)
@@ -73,7 +73,7 @@ Argument ALIST the alist."
 	FOREIGN KEY(\"src\") REFERENCES \"chunk\"(\"id\"),
 	PRIMARY KEY(\"id\" AUTOINCREMENT),
 	FOREIGN KEY(\"dst\") REFERENCES \"chunk\"(\"id\"));")))
-
+
 (define-derived-mode tng-info-mode magit-section-mode "Tng-info"
   "TNG Buf Major mode."
   :group 'tng)
@@ -109,7 +109,7 @@ Argument END-LINE to that."
   "Pulse region from BEGIN-LINE to END-LINE.")
 
 (add-to-list 'tng--post-jump-region-functions #'tng-pulse-region)
-
+
 (defun tng-jump-to-chunk ()
   "Jump to the chunk."
   (interactive)
@@ -169,8 +169,7 @@ Argument END-LINE to that."
                 (oset section start-line start-line)
                 (oset section end-line end-line))))))))
     (display-buffer (get-buffer-create "*TNG*")))
-
-;;; --------------------------------------------------------------------
+
 
 (defun tng-current-chunks ()
   "Return alists of all chunks in current file."
@@ -209,6 +208,7 @@ Argument END-LINE to that."
          (end-line (alist-strget 'end_line chunk)))
     (tng--line-rectangle start-line end-line)))
 
+
 (defun tng-make-overlay (chunk)
   "Create/update overlay from CHUNK alist."
   (let* ((chunk-id (alist-strget 'id chunk))
@@ -266,7 +266,7 @@ Argument END-LINE to that."
                    (propertize
                     " " 'display
                     left-fringe)))))
-
+
 (defun tng-auto-fix-moved ()
   "Update moved chunks' start-line and end-line."
   (dolist (k (hash-table-keys tng--overlays-hash-table))
@@ -287,7 +287,7 @@ Argument END-LINE to that."
     (let* ((ov (tng-make-overlay chunk))
           (chunk-id (overlay-get ov 'tng-chunk-id)))
       (puthash chunk-id ov tng--overlays-hash-table))))
-
+
 (defvar tng--post-add-region-functions nil
   "Function to call after new chunk added.
 Takes START and END as arguments.")
@@ -352,7 +352,7 @@ RETURNING
     (dolist (fn tng--post-add-region-functions)
       (funcall fn begin-line end-line)))
   (deactivate-mark))
-
+
 (defun tng--update-chunk-begin-end-lines (chunk-id begin-line end-line)
   "Update BEGIN-LINE and END-LINE for chunk where id = CHUNK-ID"
   (let ((ov (gethash chunk-id tng--overlays-hash-table)))
@@ -367,7 +367,7 @@ RETURNING
  id"
      (list begin-line end-line chunk-id)
      nil)))
-
+
 (defvar tng-keymap
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "v") #'tng-display-sections)
@@ -406,8 +406,7 @@ and after newlines are inserted BEG END _LEN."
    tng--overlays-hash-table)
   (clrhash tng--overlays-hash-table))
 
-;;;;;;;;;;;;;
-
+
 (defun tng-list-chunks-refresh ()
   "Refresh list of chunks."
   (let* ((chunks (tng-project-chunks)))
