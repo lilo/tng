@@ -79,8 +79,8 @@ Argument ALIST the alist."
   :group 'tng)
 
 (defvar tng--post-jump-region-functions nil
-  "Function to call after jumping to chunk.
-Takes START and END as arguments.")
+  "Functions to call after jumping to chunk.
+Take START and END as arguments.")
 
 (defun tng--line-rectangle (begin-line end-line)
   "Return bol of BEGIN-LINE and eol of END-LINE."
