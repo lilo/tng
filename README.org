@@ -25,6 +25,6 @@ Keep track of dependencies across your code.
    - tabulated mode
 
 ** Keybindings
-| Keys | Command          | Description |
-| a    | `tng-add-region' | Add chunk   |
-|      |                  |             |
+| Keys | Command           | Description |
+| a    | `tng-add-region'  | Add chunk   |
+| l    | `tng-list-chunks` | List chunks |
