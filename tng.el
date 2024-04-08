@@ -6,6 +6,7 @@
 ;;; `#'tng-list-chunks-jump' keymap
 ;;; Code:
 
+
 (require 'cl-lib)
 (require 'magit-section)
 (require 'projectile)
