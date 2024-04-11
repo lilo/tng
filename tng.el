@@ -181,7 +181,7 @@ Argument END-LINE to that."
                   "select id,filepath,start_line,end_line,comment,sha1hash from chunk where filepath=?"
                   (list filepath)
                   'full))
-         (header (mapcar #'make-symbol (car records)))
+         (header (mapcar #'intern (car records)))
          (chunks (cdr records)))
     (mapcar
      (lambda (chunk) (cl-pairlis header chunk))
@@ -195,7 +195,7 @@ Argument END-LINE to that."
                   "select id,filepath,start_line,end_line,comment,sha1hash from chunk"
                   nil
                   'full))
-         (header (mapcar #'make-symbol (car records)))
+         (header (mapcar #'intern (car records)))
          (chunks (cdr records)))
     (mapcar
      (lambda (chunk) (cl-pairlis header chunk))
