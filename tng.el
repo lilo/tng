@@ -39,12 +39,6 @@
 (defvar-local tng--effective-chunk-id nil
   "Current effective chunk id.")
 
-(defun alist-strget (key alist)
-  "Shortcut for `string-equal' `alist-get'.
-Argument KEY the key.
-Argument ALIST the alist."
-  (alist-get key alist nil nil #'string-equal))
-
 (defun tng--current-filepath ()
   "Return relative path for file in current buffer."
   (file-relative-name
