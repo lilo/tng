@@ -104,68 +104,8 @@ Argument END-LINE to that."
   "Pulse region from BEGIN-LINE to END-LINE.")
 
 (add-to-list 'tng--post-jump-region-functions #'tng-pulse-region)
+
 
-(defun tng-jump-to-chunk ()
-  "Jump to the chunk."
-  (interactive)
-  (let* ((current-section (magit-current-section))
-         (filepath (oref current-section filepath))
-         (start-line (oref current-section start-line))
-         (end-line (oref current-section end-line))
-         (buf (find-file-noselect filepath))
-         ;; #'pop-to-buffer-same-window)))
-         (display-buffer-fn #'switch-to-buffer-other-window))
-    (funcall display-buffer-fn buf)
-    (with-current-buffer buf
-      (widen)
-      (goto-line start-line)
-      (dolist (fn tng--post-jump-region-functions)
-        (funcall fn start-line end-line)))))
-
-(defvar tng-section-map
-  (let ((map (make-sparse-keymap)))
-    (set-keymap-parent map magit-section-mode-map)
-    (define-key map (kbd "C-m") #'tng-jump-to-chunk)
-    map)
-  "Parent keymap.")
-
-(defclass tng-section (magit-section)
-  ((id :initform nil)
-   (start-line :initform nil)
-   (end-line :initform nil)
-   (filepath :initform nil)
-   (comment :initform nil)
-   (keymap :initform 'tng-section-map)))
-
-(defun tng-display-sections ()
-  "Display the list of chunks."
-  (interactive)
-  (let ((current-chunks (tng-current-chunks)))
-    (with-current-buffer
-        (get-buffer-create "*TNG*")
-      (let ((inhibit-read-only t))
-        (erase-buffer)
-        (tng-info-mode)
-        (magit-insert-section (tng-section)
-          (magit-insert-heading "Chunks: ")
-          (dolist (chunk current-chunks)
-            (magit-insert-section section (tng-section)
-              (let ((filepath
-                     (alist-strget 'filepath chunk))
-                    (start-line
-                     (alist-strget 'start_line chunk))
-                    (end-line
-                     (alist-strget 'end_line chunk))
-                    (comment (alist-strget 'comment chunk)))
-                (insert
-                 (format "%s[%d:%d] -- %s\n"
-                         filepath start-line end-line comment))
-                (oset section filepath filepath)
-                (oset section start-line start-line)
-                (oset section end-line end-line))))))))
-    (display-buffer (get-buffer-create "*TNG*")))
-
-
 (defun tng-current-chunks ()
   "Return alists of all chunks in current file."
   (let* ((filepath (tng--current-filepath))
@@ -195,72 +135,60 @@ Argument END-LINE to that."
      (lambda (chunk) (cl-pairlis header chunk))
      chunks)))
 
-
-(defun tng--chunk-region (chunk)
-  "Return begin pos and end pos of the CHUNK."
-  (let* (begin end
-         (start-line (alist-strget 'start_line chunk))
-         (end-line (alist-strget 'end_line chunk)))
-    (tng--line-rectangle start-line end-line)))
-
-
 (defun tng-make-overlay (chunk)
-  "Create/update overlay from CHUNK alist."
-  (let* ((chunk-id (alist-strget 'id chunk))
-         (begin-line (alist-strget 'start_line chunk))
-         (end-line (alist-strget 'end_line chunk))
-         (sha1hash (alist-strget 'sha1hash chunk))
-         (reg (tng--chunk-region chunk))
-         (begin (car reg))
-         (end (cdr reg))
-         (sha1hashfact
-          (sha1 (buffer-substring-no-properties begin end)))
-         (diff-flag (not (string-equal sha1hashfact sha1hash)))
-         (ov-in-overlays-table
-          (gethash
-           chunk-id tng--overlays-hash-table))
-         (ov
-          (or
-           ov-in-overlays-table
-           (make-overlay begin end)))
-         (ov-begin-marker
-          (or
-           (overlay-get ov 'tng-begin-marker)
-           (prog1
-               (setq marker (make-marker))
-             (set-marker marker begin))))
-         (ov-end-marker
-          (or
-           (overlay-get ov 'tng-end-marker)
-           (prog1 (setq marker (make-marker)) (set-marker marker end))))
-         (ov-markers-sha1
-          (sha1
-           (buffer-substring-no-properties
-            ov-begin-marker ov-end-marker)))
-         (moved-flag
-          (and
-           diff-flag
-           (string-equal ov-markers-sha1 sha1hash)))
-         (ov-face
-          (cond (moved-flag 'diff-refine-changed)
-                (diff-flag 'diff-refine-removed)
-                (t 'highlight)))
-         (left-fringe
-          (cond (moved-flag '(left-fringe up-arrow shr-mark))
-                (diff-flag '(left-fringe question-mark dired-flagged))
-                (t '(left-fringe large-circle shadow)))))
-    (prog1 ov
-      (overlay-put ov 'tng-chunk-id chunk-id)
-      (overlay-put ov 'tng-moved-flag moved-flag)
-      (overlay-put ov 'tng-begin-line (line-number-at-pos ov-begin-marker))
-      (overlay-put ov 'tng-end-line (1- (line-number-at-pos ov-end-marker))) ;; TODO: line num
-      (overlay-put ov 'tng-begin-marker ov-begin-marker)
-      (overlay-put ov 'tng-end-marker ov-end-marker)
-      (overlay-put ov 'face ov-face)
-      (overlay-put ov 'before-string
-                   (propertize
-                    " " 'display
-                    left-fringe)))))
+  (let-alist chunk
+    (let* ((reg (tng--line-rectangle .start_line .end_line))
+           (begin (car reg))
+           (end (cdr reg))
+           (sha1hashfact
+            (sha1 (buffer-substring-no-properties begin end)))
+           (diff-flag (not (string-equal sha1hashfact .sha1hash)))
+           (ov-in-overlays-table
+            (gethash
+             .id tng--overlays-hash-table))
+           (ov
+            (or
+             ov-in-overlays-table
+             (make-overlay begin end)))
+           (ov-begin-marker
+            (or
+             (overlay-get ov 'tng-begin-marker)
+             (prog1
+                 (setq marker (make-marker))
+               (set-marker marker begin))))
+           (ov-end-marker
+            (or
+             (overlay-get ov 'tng-end-marker)
+             (prog1 (setq marker (make-marker)) (set-marker marker end))))
+           (ov-markers-sha1
+            (sha1
+             (buffer-substring-no-properties
+              ov-begin-marker ov-end-marker)))
+           (moved-flag
+            (and
+             diff-flag
+             (string-equal ov-markers-sha1 .sha1hash)))
+           (ov-face
+            (cond (moved-flag 'diff-refine-changed)
+                  (diff-flag 'diff-refine-removed)
+                  (t 'highlight)))
+           (left-fringe
+            (cond (moved-flag '(left-fringe up-arrow shr-mark))
+                  (diff-flag '(left-fringe question-mark dired-flagged))
+                  (t '(left-fringe large-circle shadow)))))
+      (prog1 ov
+        (overlay-put ov 'tng-chunk-id .id)
+        (overlay-put ov 'tng-moved-flag moved-flag)
+        (overlay-put ov 'tng-begin-line (line-number-at-pos ov-begin-marker))
+        (overlay-put ov 'tng-end-line (1- (line-number-at-pos ov-end-marker))) ;; TODO: line num
+        (overlay-put ov 'tng-begin-marker ov-begin-marker)
+        (overlay-put ov 'tng-end-marker ov-end-marker)
+        (overlay-put ov 'face ov-face)
+        (overlay-put ov 'before-string
+                     (propertize
+                      " " 'display
+                      left-fringe))))))
+
 
 (defun tng-auto-fix-moved ()
   "Update moved chunks' start-line and end-line."
