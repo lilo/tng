@@ -413,21 +413,15 @@ and after newlines are inserted BEG END _LEN."
   (let* ((chunks (tng-project-chunks)))
     (cl-flet
         ((tabulate-chunk (chunk)
-           (let* ((id (number-to-string
-                       (alist-strget 'id chunk)))
-                  (fname (alist-strget 'filepath chunk))
-                  (start (alist-strget 'start_line chunk))
-                  (end (alist-strget 'end_line chunk))
-                  (pos (format "%s:%s" start end))
-                  (comment (alist-strget 'comment chunk)))
+           (let-alist chunk
              (list
               chunk
               (vector
                (list
-                id
+                (number-to-string .id)
                 'face 'default
                 'action (lambda (_button) (tng-list-chunks-jump)))
-               (list fname) (list pos) (list comment))))))
+               (list .filepath) (list (format "%s:%s" .start_line .end_line)) (list .comment))))))
       (setq tabulated-list-entries (mapcar #'tabulate-chunk chunks)))
     (tabulated-list-init-header)
     (tabulated-list-print)))
