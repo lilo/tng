@@ -3,12 +3,11 @@
 ;;; TODO:
 ;;; rename start/begin
 ;;; rename start_line, end_line
-;;; `#'tng-list-chunks-jump' keymap
+;;; replace chunk (keeping deps)
 ;;; Code:
 
 
 (require 'cl-lib)
-(require 'magit-section)
 (require 'projectile)
 
 (defvar-local tng--overlays-hash-table (make-hash-table)
@@ -23,7 +22,7 @@
 
 (defgroup tng nil
   "Track deps."
-  :group 'convenience)
+  :group 'tng)
 
 (defcustom tng-auto-fix-moved-chunks t
   "Auto-fix and auto-update moved chunks."
@@ -69,16 +68,13 @@
 	PRIMARY KEY(\"id\" AUTOINCREMENT),
 	FOREIGN KEY(\"dst\") REFERENCES \"chunk\"(\"id\"));")))
 
-(define-derived-mode tng-info-mode magit-section-mode "Tng-info"
-  "TNG Buf Major mode."
-  :group 'tng)
 
 (defvar tng--post-jump-region-functions nil
   "Functions to call after jumping to chunk.
 Take START and END as arguments.")
 
 (defun tng--line-rectangle (begin-line end-line)
-  "Return bol of BEGIN-LINE and eol of END-LINE."
+  "Return bol of BEGIN-LINE and eol of END-LINE for current buffer."
   (save-excursion
     (let* ((start
             (progn
@@ -291,16 +287,6 @@ RETURNING
      (list begin-line end-line chunk-id)
      nil)))
 
-(defvar tng-keymap
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "v") #'tng-display-sections)
-    (define-key map (kbd "t") #'tng-mode)
-    (define-key map (kbd "a") #'tng-add-region)
-    (define-key map (kbd "r") #'tng--read-chunks)
-    (define-key map (kbd "l") #'tng-list-chunks)
-    map))
-
-(global-set-key (kbd "M-t") tng-keymap)
 
 (define-minor-mode tng-mode
   "Tango mode."
@@ -351,6 +337,77 @@ and after newlines are inserted BEG END _LEN."
 (defun tng-list-chunks-jump ()
   "Jump to the chunk."
   (interactive)
+  (let-alist (tabulated-list-get-id)
+    (let* ((buf (find-file-noselect .filepath))
+           ;; #'pop-to-buffer-same-window)))
+           (display-buffer-fn #'switch-to-buffer-other-window))
+      (funcall display-buffer-fn buf)
+      (with-current-buffer buf
+        (widen)
+        (goto-line .start_line)
+        (dolist (fn tng--post-jump-region-functions)
+          (funcall fn .start_line .end-line))))))
+
+;; (defvar-keymap tng-list-chunks-mode-map
+;;   :doc "Keymap for `tng-list-chunks-mode'."
+;;   :parent tabulated-list-mode-map
+;;   "C-m" #'tng-list-chunks-jump)
+
+(defvar tng-list-chunks-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'tng-list-chunks-jump)
+    (define-key map (kbd "C-m") #'tng-list-chunks-jump)
+    map))
+
+(define-derived-mode tng-list-chunks-mode tabulated-list-mode "tng-list-chunks-mode"
+  "Major mode for listing chunks.
+\\<tng-list-chunks-mode-map>
+\\{tng-list-chunks-mode-map}"
+  (setq truncate-lines t)
+  (setq buffer-read-only t)
+  (setq tabulated-list-format [("id" 4 t)
+			       ("filename" 12 t)
+                               ("pos" 8 t)
+			       ("comment"  25 t)])
+  (setq tabulated-list-sort-key (cons "filename" nil))
+  (add-hook 'tabulated-list-revert-hook #'tng-list-chunks-refresh nil t))
+
+(put 'tng-list-chunks-mode 'mode-class 'special)
+
+(defun tng-list-chunks ()
+  "Display a list of existing chunks."
+  (interactive)
+  (let ((buf (get-buffer-create "* TNG chunks*")))
+    (switch-to-buffer buf)
+    (tng-list-chunks-mode)
+    (tng-list-chunks-refresh)))
+
+;; list chunks: project, file
+;; status: Src, Dst, Both
+;; status: Modified, Unfixed, Fixed
+
+
+(defun tng-link-chunks-list-refresh ()
+  "Refresh list of chunks."
+  (let* ((chunks (tng-project-chunks)))
+    (cl-flet
+        ((tabulate-chunk (chunk)
+           (let-alist chunk
+             (list
+              chunk
+              (vector
+               (list
+                (number-to-string .id)
+                'face 'default
+                'action (lambda (_button) (tng-list-chunks-jump)))
+               (list .filepath) (list (format "%s:%s" .start_line .end_line)) (list .comment)))))))
+    (setq tabulated-list-entries (mapcar #'tabulate-chunk chunks))
+    (tabulated-list-init-header)
+    (tabulated-list-print)))
+
+(defun tng-link-chunks-ret ()
+  "Handle RET."
+  (interactive)
   (let* ((chunk (tabulated-list-get-id))
          (filepath (alist-strget 'filepath chunk))
          (start-line (alist-strget 'start_line chunk))
@@ -398,6 +455,28 @@ and after newlines are inserted BEG END _LEN."
     (switch-to-buffer buf)
     (tng-list-chunks-mode)
     (tng-list-chunks-refresh)))
+
+(defun tng-link-select-chunk (chunk)
+  "Display a list of chunks for linking the CHUNK.
+DIRECTION is 'src or 'dst."
+  (interactive)
+  (let* ((current-chunk ())
+         (buf
+          (get-buffer-create
+           (format "*TNG connect %s*" (tng--current-filepath)))))
+    (switch-to-buffer buf)
+    (tng-link-)
+    (tng-list-chunks-refresh)))
+
+(defvar tng-keymap
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "t") #'tng-mode)
+    (define-key map (kbd "a") #'tng-add-region)
+    (define-key map (kbd "r") #'tng--read-chunks)
+    (define-key map (kbd "l") #'tng-list-chunks)
+    map))
+
+(global-set-key (kbd "M-t") tng-keymap)
 
 (provide 'tng)
 ;;; tng.el ends here
