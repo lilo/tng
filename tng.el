@@ -29,6 +29,11 @@
   :group 'tng
   :type 'boolean)
 
+(defcustom tng-use-fringes t
+  "Use fringes indicators."
+  :group 'tng
+  :type 'boolean)
+
 (defvar-local tng--last-added-chunk-id nil
   "Last added chunk id.")
 
@@ -180,10 +185,11 @@ Argument END-LINE to that."
         (overlay-put ov 'tng-begin-marker ov-begin-marker)
         (overlay-put ov 'tng-end-marker ov-end-marker)
         (overlay-put ov 'face ov-face)
-        (overlay-put ov 'before-string
-                     (propertize
-                      " " 'display
-                      left-fringe))))))
+        (when tng-use-fringes
+          (overlay-put ov 'before-string
+                       (propertize
+                        " " 'display
+                        left-fringe)))))))
 
 
 (defun tng-auto-fix-moved ()
