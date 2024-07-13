@@ -8,12 +8,11 @@
 
 
 (require 'cl-lib)
-(require 'projectile)
 
 (defvar-local tng--overlays-hash-table (make-hash-table)
   "The hash-table.")
 
-(defvar-local tng-project-dir (projectile-project-root)
+(defvar-local tng-project-dir (project-root (project-current))
   "Root of current project.")
 
 (defvar-local tng-db-filename
@@ -47,7 +46,7 @@
   "Return relative path for file in current buffer."
   (file-relative-name
            (buffer-file-name)
-           (projectile-project-root)))
+           tng-project-dir))
 
 (defun tng-init-db (&optional dir)
   "Create tng DB in the project root DIR."
@@ -256,7 +255,7 @@ Argument END to here."
          (filepath
           (file-relative-name
            (buffer-file-name)
-           (projectile-project-root)))
+           tng-project-dir))
          (comment
           (if (not arg)
               (read-from-minibuffer "Comment for this chunk: ")))
