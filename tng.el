@@ -1,5 +1,6 @@
 ;;; package --- tng.el -*- lexical-binding:t; coding:utf-8 -*-
 ;;; Commentary:
+;;; Package-Requires: ((dash "2.19.1"))
 ;;; TODO:
 ;;; rename start/begin
 ;;; rename start_line, end_line
@@ -483,6 +484,13 @@ DIRECTION is 'src or 'dst."
     map))
 
 (global-set-key (kbd "M-t") tng-keymap)
+
+(defun tng-chunks-at-point ()
+  "Return list of tng chunks that include current point."
+  (let* ((overlays (overlays-at (point))))
+    (-filter
+     (lambda (o) (plist-member (overlay-properties o) 'tng-chunk-id))
+     overlays)))
 
 (provide 'tng)
 ;;; tng.el ends here
