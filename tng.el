@@ -6,10 +6,12 @@
 ;;; rename start_line, end_line
 ;;; replace chunk (keeping deps)
 ;;; emacsql
+;;; naming
 ;;; Code:
 
 
 (require 'cl-lib)
+(require 'dash)
 
 (defvar-local tng--overlays-hash-table (make-hash-table)
   "The hash-table.")
@@ -218,8 +220,7 @@ Argument END-LINE to that."
   "Function to call after new chunk added.
 Takes START and END as arguments.")
 
-(add-to-list 'tng--post-add-region-functions #'tng-pulse-region)
-
+;; (add-to-list 'tng--post-add-region-functions #'tng-pulse-region)
 
 (defun tng-add-region (arg begin end)
   "Add new resource from the region.
@@ -292,6 +293,20 @@ WHERE id = ?
 RETURNING
  id"
      (list begin-line end-line chunk-id)
+     nil)))
+
+(defun tng--update-chunk-hash (chunk-id sha1hash)
+  "Update BEGIN-LINE and END-LINE for chunk where id = CHUNK-ID"
+  (let ((ov (gethash chunk-id tng--overlays-hash-table)))
+    (sqlite-select
+     (sqlite-open tng-db-filename)
+     "
+UPDATE chunk
+SET sha1hash = ?
+WHERE id = ?
+RETURNING
+ id"
+     (list sha1hash chunk-id)
      nil)))
 
 
@@ -475,15 +490,40 @@ DIRECTION is 'src or 'dst."
     (tng-link-)
     (tng-list-chunks-refresh)))
 
-(defvar tng-keymap
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "t") #'tng-mode)
-    (define-key map (kbd "a") #'tng-add-region)
-    (define-key map (kbd "r") #'tng--read-chunks)
-    (define-key map (kbd "l") #'tng-list-chunks)
-    map))
 
-(global-set-key (kbd "M-t") tng-keymap)
+;; https://www.howardism.org/Technical/Emacs/alt-completing-read.html
+(defun alt-completing-read (prompt collection &optional predicate require-match initial-input hist def inherit-input-method)
+  "Calls `completing-read' but returns the value from COLLECTION.
+
+Simple wrapper around the `completing-read' function that assumes
+the collection is either an alist, or a hash-table, and returns
+the _value_ of the choice, not the selected choice. For instance,
+give a variable of choices like:
+
+    (defvar favorite-hosts '((\"Glamdring\" . \"192.168.5.12\")
+                             (\"Orcrist\"   . \"192.168.5.10\")
+                             (\"Sting\"     . \"192.168.5.220\")
+                             (\"Gungnir\"   . \"192.168.5.25\")))
+
+We can use this function to `interactive' without needing to call
+`alist-get' afterwards:
+
+    (defun favorite-ssh (hostname)
+      \"Start a SSH session to a given HOSTNAME.\"
+      (interactive (list (alt-completing-read \"Host: \" favorite-hosts)))
+      (message \"Rockin' and rollin' to %s\" hostname))"
+
+  ;; Yes, Emacs really should have an `alistp' predicate to make this code more readable:
+  (cl-flet ((assoc-list-p (obj) (and (listp obj) (consp (car obj)))))
+
+    (let* ((choice
+            (completing-read prompt collection predicate require-match initial-input hist def inherit-input-method))
+           (results (cond
+                     ((hash-table-p collection) (gethash choice collection))
+                     ((assoc-list-p collection) (alist-get choice collection def nil 'equal))
+                     (t                         choice))))
+      (if (listp results) (first results) results))))
+
 
 (defun tng-chunks-at-point ()
   "Return list of tng chunks that include current point."
@@ -491,6 +531,102 @@ DIRECTION is 'src or 'dst."
     (-filter
      (lambda (o) (plist-member (overlay-properties o) 'tng-chunk-id))
      overlays)))
+
+(defun tng-chunk-shift-down ()
+  "Shift current chunk downwards."
+  (interactive)
+  (when-let* ((chunks (tng-chunks-at-point))
+              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
+              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
+              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
+              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
+    (tng--update-chunk-begin-end-lines chunk-id (1+ begin-line) (1+ end-line))
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+(defun tng-chunk-shift-up ()
+  "Shift current chunk upwnwards."
+  (interactive)
+  (when-let* ((chunks (tng-chunks-at-point))
+              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
+              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
+              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
+              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
+    (tng--update-chunk-begin-end-lines chunk-id (1- begin-line) (1- end-line))
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+(defun tng-chunk-expand-upper-up ()
+  (interactive)
+  (when-let* ((chunks (tng-chunks-at-point))
+              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
+              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
+              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
+              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
+    (tng--update-chunk-begin-end-lines chunk-id (1- begin-line) end-line)
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+(defun tng-chunk-expand-upper-down ()
+  (interactive)
+  (when-let* ((chunks (tng-chunks-at-point))
+              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
+              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
+              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
+              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
+    (tng--update-chunk-begin-end-lines chunk-id (1+ begin-line) end-line)
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+(defun tng-chunk-expand-down-up ()
+  (interactive)
+  (when-let* ((chunks (tng-chunks-at-point))
+              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
+              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
+              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
+              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
+    (tng--update-chunk-begin-end-lines chunk-id begin-line (1- end-line))
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+(defun tng-chunk-expand-down-down ()
+  (interactive)
+  (when-let* ((chunks (tng-chunks-at-point))
+              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
+              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
+              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
+              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
+    (tng--update-chunk-begin-end-lines chunk-id begin-line (1+ end-line))
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+(defun tng-chunk-rehash ()
+  (interactive)
+  (when-let* ((chunks (tng-chunks-at-point))
+              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
+              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
+              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
+              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
+    ;; TODO:
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+
+(defvar tng-keymap
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "t") #'tng-mode)
+    (define-key map (kbd "a") #'tng-add-region)
+    (define-key map (kbd "r") #'tng--read-chunks)
+    (define-key map (kbd "l") #'tng-list-chunks)
+    (define-key map (kbd "]") #'tng-chunk-shift-down)
+    (define-key map (kbd "[") #'tng-chunk-shift-up)
+    (define-key map (kbd "n") #'tng-chunk-expand-upper-down)
+    (define-key map (kbd "p") #'tng-chunk-expand-upper-up)
+    (define-key map (kbd "N") #'tng-chunk-expand-down-down)
+    (define-key map (kbd "P") #'tng-chunk-expand-down-up)
+    map))
+
+(global-set-key (kbd "M-t") tng-keymap)
 
 (provide 'tng)
 ;;; tng.el ends here
