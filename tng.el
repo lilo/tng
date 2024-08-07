@@ -629,17 +629,17 @@ We can use this function to `interactive' without needing to call
          "Select: "
          (tng-get-completion-alist chunks))))))
   (when chunk-id
-    (tng-chunk-resize chunk-id 0 1)
+    (tng-chunk-resize chunk-id :begin 0 :end +1)
     (tng-delete-overlays)
     (tng-create-overlays)))
 
-(defun tng-chunk-resize (chunk-id begin-line-add end-line-add)
+(cl-defun tng-chunk-resize (chunk-id &key begin end)
   (when-let* ((chunk-ov (gethash chunk-id tng--overlays-hash-table))
               (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
               (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
     (tng--update-chunk-begin-end-lines
      chunk-id
-     (+ begin-line begin-line-add) (+ end-line-add end-line))
+     (+ begin-line begin) (+ end-line end))
     (tng-delete-overlays)
     (tng-create-overlays)))
 
