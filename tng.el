@@ -7,6 +7,7 @@
 ;;; replace chunk (keeping deps)
 ;;; emacsql
 ;;; naming
+;;; minor-mode-map-alist
 ;;; Code:
 
 
@@ -182,6 +183,7 @@ Argument END-LINE to that."
                   (t '(left-fringe large-circle shadow)))))
       (prog1 ov
         (overlay-put ov 'tng-chunk-id .id)
+        (overlay-put ov 'tng-chunk chunk)
         (overlay-put ov 'tng-moved-flag moved-flag)
         (overlay-put ov 'tng-begin-line (line-number-at-pos ov-begin-marker))
         (overlay-put ov 'tng-end-line (1- (line-number-at-pos ov-end-marker))) ;; TODO: line num
@@ -597,6 +599,47 @@ We can use this function to `interactive' without needing to call
               (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
               (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
     (tng--update-chunk-begin-end-lines chunk-id begin-line (1+ end-line))
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+(defun tng-get-completion-alist (tng-overlays)
+  "Return alist '((file:beg:end:comment . chunk-id) ...)"
+  (setq completions nil) ; TODO:
+  (dolist (chunk-ov tng-overlays)
+    (let*
+        ((chunk-alist (plist-get (overlay-properties chunk-ov) 'tng-chunk))
+         (filename (alist-get 'filepath chunk-alist))
+         (comment (alist-get 'comment chunk-alist))
+         (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
+         (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line))
+         (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
+         (chunk-fmt
+          (format "%s:%d:%d:%s" filename begin-line end-line comment)))
+      (push `(,chunk-fmt . ,chunk-id) completions)))
+  completions)
+
+(defun tng-chunk-resize-down-down (chunk-id)
+  (interactive
+   (list
+    (when-let* ((chunks (tng-chunks-at-point))
+                (first-chunk (car chunks)))
+      (if (length= chunks 1)
+          (plist-get (overlay-properties first-chunk) 'tng-chunk-id)
+        (alt-completing-read
+         "Select: "
+         (tng-get-completion-alist chunks))))))
+  (when chunk-id
+    (tng-chunk-resize chunk-id 0 1)
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+(defun tng-chunk-resize (chunk-id begin-line-add end-line-add)
+  (when-let* ((chunk-ov (gethash chunk-id tng--overlays-hash-table))
+              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
+              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
+    (tng--update-chunk-begin-end-lines
+     chunk-id
+     (+ begin-line begin-line-add) (+ end-line-add end-line))
     (tng-delete-overlays)
     (tng-create-overlays)))
 
