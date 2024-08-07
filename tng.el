@@ -186,7 +186,7 @@ Argument END-LINE to that."
         (overlay-put ov 'tng-chunk chunk)
         (overlay-put ov 'tng-moved-flag moved-flag)
         (overlay-put ov 'tng-begin-line (line-number-at-pos ov-begin-marker))
-        (overlay-put ov 'tng-end-line (1- (line-number-at-pos ov-end-marker))) ;; TODO: line num
+        (overlay-put ov 'tng-end-line (1- (line-number-at-pos ov-end-marker)))
         (overlay-put ov 'tng-begin-marker ov-begin-marker)
         (overlay-put ov 'tng-end-marker ov-end-marker)
         (overlay-put ov 'face ov-face)
@@ -204,7 +204,7 @@ Argument END-LINE to that."
       (when (overlay-get ov 'tng-moved-flag)
         (let ((chunk-id (overlay-get ov 'tng-chunk-id))
               (begin-line (overlay-get ov 'tng-begin-line))
-              (end-line (overlay-get ov 'tng-end-line)))              
+              (end-line (overlay-get ov 'tng-end-line)))
           (tng--update-chunk-begin-end-lines chunk-id begin-line end-line)
           (overlay-put ov 'tng-moved-flag nil)
           (overlay-put ov 'tng-begin-marker nil)
@@ -623,9 +623,10 @@ We can use this function to `interactive' without needing to call
 
 (cl-defun tng-chunk-resize (chunk-id &key begin end)
   "Update chunk, increasing or decreasing its boundaries."
-  (when-let* ((chunk-ov (gethash chunk-id tng--overlays-hash-table))
-              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
-              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
+  (when-let*
+      ((chunk-ov (gethash chunk-id tng--overlays-hash-table))
+       (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
+       (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
     (tng--update-chunk-begin-end-lines
      chunk-id
      (+ begin-line begin) (+ end-line end))
