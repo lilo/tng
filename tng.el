@@ -298,7 +298,7 @@ RETURNING
      nil)))
 
 (defun tng--update-chunk-hash (chunk-id sha1hash)
-  "Update BEGIN-LINE and END-LINE for chunk where id = CHUNK-ID"
+  "Update SHA1HASH for chunk where id = CHUNK-ID"
   (let ((ov (gethash chunk-id tng--overlays-hash-table)))
     (sqlite-select
      (sqlite-open tng-db-filename)
@@ -312,7 +312,7 @@ RETURNING
      nil)))
 
 (defun tng--update-chunk-comment (chunk-id comment)
-  "Update BEGIN-LINE and END-LINE for chunk where id = CHUNK-ID"
+  "Update COMMENT for chunk where id = CHUNK-ID"
   (let ((ov (gethash chunk-id tng--overlays-hash-table)))
     (sqlite-select
      (sqlite-open tng-db-filename)
