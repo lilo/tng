@@ -590,49 +590,37 @@ We can use this function to `interactive' without needing to call
   (interactive
    (list (tng-select-chunk)))
   (when chunk-id
-    (tng-chunk-resize chunk-id :begin -1 :end -1)
-    (tng-delete-overlays)
-    (tng-create-overlays)))
+    (tng-chunk-resize chunk-id :begin -1 :end -1)))
 
 (defun tng-chunk-move-down (chunk-id)
   (interactive
    (list (tng-select-chunk)))
   (when chunk-id
-    (tng-chunk-resize chunk-id :begin +1 :end +1)
-    (tng-delete-overlays)
-    (tng-create-overlays)))
+    (tng-chunk-resize chunk-id :begin +1 :end +1)))
 
 (defun tng-chunk-expand-up (chunk-id)
   (interactive
    (list (tng-select-chunk)))
   (when chunk-id
-    (tng-chunk-resize chunk-id :begin -1 :end 0)
-    (tng-delete-overlays)
-    (tng-create-overlays)))
+    (tng-chunk-resize chunk-id :begin -1 :end 0)))
 
 (defun tng-chunk-expand-down (chunk-id)
   (interactive
    (list (tng-select-chunk)))
   (when chunk-id
-    (tng-chunk-resize chunk-id :begin 0 :end +1)
-    (tng-delete-overlays)
-    (tng-create-overlays)))
+    (tng-chunk-resize chunk-id :begin 0 :end +1)))
 
 (defun tng-chunk-shrink-up (chunk-id)
   (interactive
    (list (tng-select-chunk)))
   (when chunk-id
-    (tng-chunk-resize chunk-id :begin +1 :end 0)
-    (tng-delete-overlays)
-    (tng-create-overlays)))
+    (tng-chunk-resize chunk-id :begin +1 :end 0)))
 
 (defun tng-chunk-shrink-down (chunk-id)
   (interactive
    (list (tng-select-chunk)))
   (when chunk-id
-    (tng-chunk-resize chunk-id :begin 0 :end -1)
-    (tng-delete-overlays)
-    (tng-create-overlays)))
+    (tng-chunk-resize chunk-id :begin 0 :end -1)))
 
 (cl-defun tng-chunk-resize (chunk-id &key begin end)
   "Update chunk, increasing or decreasing its boundaries."
@@ -643,14 +631,6 @@ We can use this function to `interactive' without needing to call
     (tng--update-chunk-begin-end-lines
      chunk-id
      (+ begin-line begin) (+ end-line end))
-    (tng-delete-overlays)
-    (tng-create-overlays)))
-
-(defun tng-chunk-shrink-down (chunk-id)
-  (interactive
-   (list (tng-select-chunk)))
-  (when chunk-id
-    (tng-chunk-resize chunk-id :begin 0 :end -1)
     (tng-delete-overlays)
     (tng-create-overlays)))
 
