@@ -324,6 +324,17 @@ RETURNING
  id"
      (list comment chunk-id)
      nil)))
+
+(defun tng--delete-chunk (chunk-id)
+  "Delete chunk where id = CHUNK-ID."
+  (let ((ov (gethash chunk-id tng--overlays-hash-table)))
+    (sqlite-select
+     (sqlite-open tng-db-filename)
+     "
+DELETE FROM chunk
+WHERE id = ?"
+     (list chunk-id)
+     nil)))
 
 
 (define-minor-mode tng-mode
@@ -668,6 +679,13 @@ We can use this function to `interactive' without needing to call
     (tng-delete-overlays)
     (tng-create-overlays)))
 
+(defun tng-chunk-delete (chunk-id)
+  (interactive
+   (list (tng-select-chunk)))
+  (tng--delete-chunk chunk-id)
+  (tng-delete-overlays)
+  (tng-create-overlays))
+
 (defvar tng-keymap
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "t") #'tng-mode)
@@ -682,6 +700,7 @@ We can use this function to `interactive' without needing to call
     (define-key map (kbd "P") #'tng-chunk-shrink-down)
     (define-key map (kbd "h") #'tng-chunk-rehash)
     (define-key map (kbd "c") #'tng-chunk-comment)
+    (define-key map (kbd "C-k") #'tng-chunk-delete)
     map))
 
 (global-set-key (kbd "M-t") tng-keymap)
