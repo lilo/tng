@@ -310,6 +310,20 @@ RETURNING
  id"
      (list sha1hash chunk-id)
      nil)))
+
+(defun tng--update-chunk-comment (chunk-id comment)
+  "Update BEGIN-LINE and END-LINE for chunk where id = CHUNK-ID"
+  (let ((ov (gethash chunk-id tng--overlays-hash-table)))
+    (sqlite-select
+     (sqlite-open tng-db-filename)
+     "
+UPDATE chunk
+SET comment = ?
+WHERE id = ?
+RETURNING
+ id"
+     (list comment chunk-id)
+     nil)))
 
 
 (define-minor-mode tng-mode
@@ -534,74 +548,6 @@ We can use this function to `interactive' without needing to call
      (lambda (o) (plist-member (overlay-properties o) 'tng-chunk-id))
      overlays)))
 
-(defun tng-chunk-shift-down ()
-  "Shift current chunk downwards."
-  (interactive)
-  (when-let* ((chunks (tng-chunks-at-point))
-              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
-              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
-              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
-              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
-    (tng--update-chunk-begin-end-lines chunk-id (1+ begin-line) (1+ end-line))
-    (tng-delete-overlays)
-    (tng-create-overlays)))
-
-(defun tng-chunk-shift-up ()
-  "Shift current chunk upwnwards."
-  (interactive)
-  (when-let* ((chunks (tng-chunks-at-point))
-              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
-              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
-              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
-              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
-    (tng--update-chunk-begin-end-lines chunk-id (1- begin-line) (1- end-line))
-    (tng-delete-overlays)
-    (tng-create-overlays)))
-
-(defun tng-chunk-expand-upper-up ()
-  (interactive)
-  (when-let* ((chunks (tng-chunks-at-point))
-              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
-              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
-              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
-              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
-    (tng--update-chunk-begin-end-lines chunk-id (1- begin-line) end-line)
-    (tng-delete-overlays)
-    (tng-create-overlays)))
-
-(defun tng-chunk-expand-upper-down ()
-  (interactive)
-  (when-let* ((chunks (tng-chunks-at-point))
-              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
-              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
-              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
-              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
-    (tng--update-chunk-begin-end-lines chunk-id (1+ begin-line) end-line)
-    (tng-delete-overlays)
-    (tng-create-overlays)))
-
-(defun tng-chunk-expand-down-up ()
-  (interactive)
-  (when-let* ((chunks (tng-chunks-at-point))
-              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
-              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
-              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
-              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
-    (tng--update-chunk-begin-end-lines chunk-id begin-line (1- end-line))
-    (tng-delete-overlays)
-    (tng-create-overlays)))
-
-(defun tng-chunk-expand-down-down ()
-  (interactive)
-  (when-let* ((chunks (tng-chunks-at-point))
-              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
-              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
-              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
-              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
-    (tng--update-chunk-begin-end-lines chunk-id begin-line (1+ end-line))
-    (tng-delete-overlays)
-    (tng-create-overlays)))
-
 (defun tng-get-completion-alist (tng-overlays)
   "Return alist '((file:beg:end:comment . chunk-id) ...)"
   (setq completions nil) ; TODO:
@@ -618,22 +564,65 @@ We can use this function to `interactive' without needing to call
       (push `(,chunk-fmt . ,chunk-id) completions)))
   completions)
 
-(defun tng-chunk-resize-down-down (chunk-id)
-  (interactive
-   (list
-    (when-let* ((chunks (tng-chunks-at-point))
+(defun tng-select-chunk ()
+  (when-let* ((chunks (tng-chunks-at-point))
                 (first-chunk (car chunks)))
       (if (length= chunks 1)
           (plist-get (overlay-properties first-chunk) 'tng-chunk-id)
         (alt-completing-read
          "Select: "
-         (tng-get-completion-alist chunks))))))
+         (tng-get-completion-alist chunks)))))
+
+(defun tng-chunk-move-up (chunk-id)
+  (interactive
+   (list (tng-select-chunk)))
+  (when chunk-id
+    (tng-chunk-resize chunk-id :begin -1 :end -1)
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+(defun tng-chunk-move-down (chunk-id)
+  (interactive
+   (list (tng-select-chunk)))
+  (when chunk-id
+    (tng-chunk-resize chunk-id :begin +1 :end +1)
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+(defun tng-chunk-expand-up (chunk-id)
+  (interactive
+   (list (tng-select-chunk)))
+  (when chunk-id
+    (tng-chunk-resize chunk-id :begin -1 :end 0)
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+(defun tng-chunk-expand-down (chunk-id)
+  (interactive
+   (list (tng-select-chunk)))
   (when chunk-id
     (tng-chunk-resize chunk-id :begin 0 :end +1)
     (tng-delete-overlays)
     (tng-create-overlays)))
 
+(defun tng-chunk-shrink-up (chunk-id)
+  (interactive
+   (list (tng-select-chunk)))
+  (when chunk-id
+    (tng-chunk-resize chunk-id :begin +1 :end 0)
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+(defun tng-chunk-shrink-down (chunk-id)
+  (interactive
+   (list (tng-select-chunk)))
+  (when chunk-id
+    (tng-chunk-resize chunk-id :begin 0 :end -1)
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
 (cl-defun tng-chunk-resize (chunk-id &key begin end)
+  "Update chunk, increasing or decreasing its boundaries."
   (when-let* ((chunk-ov (gethash chunk-id tng--overlays-hash-table))
               (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
               (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
@@ -643,17 +632,40 @@ We can use this function to `interactive' without needing to call
     (tng-delete-overlays)
     (tng-create-overlays)))
 
-(defun tng-chunk-rehash ()
-  (interactive)
-  (when-let* ((chunks (tng-chunks-at-point))
-              (chunk-ov (when (= 1 (length chunks)) (car chunks)))
-              (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
-              (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
-              (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
-    ;; TODO:
+(defun tng-chunk-shrink-down (chunk-id)
+  (interactive
+   (list (tng-select-chunk)))
+  (when chunk-id
+    (tng-chunk-resize chunk-id :begin 0 :end -1)
     (tng-delete-overlays)
     (tng-create-overlays)))
 
+(defun tng-chunk-rehash (chunk-id)
+  (interactive
+   (list (tng-select-chunk)))
+  (when-let* ((ov (gethash chunk-id tng--overlays-hash-table))
+              (start (plist-get (overlay-properties ov) 'tng-begin-marker))
+              (end (plist-get (overlay-properties ov) 'tng-end-marker))
+              (new-sha1hash (sha1 (buffer-substring-no-properties start end))))
+    (tng--update-chunk-hash chunk-id new-sha1hash)
+    (tng-delete-overlays)
+    (tng-create-overlays)))
+
+(defun tng-chunk-comment (chunk-id)
+  (interactive
+   (list (tng-select-chunk)))
+  (when-let* ((ov (gethash chunk-id tng--overlays-hash-table))
+              (current-comment
+               (let-alist
+                   (plist-get (overlay-properties ov) 'tng-chunk)
+                 .comment)))
+    (message "Current comment: %s" current-comment)
+    (sit-for 1.5) ; TODO:
+    (tng--update-chunk-comment
+     chunk-id
+     (read-from-minibuffer "New comment: "))
+    (tng-delete-overlays)
+    (tng-create-overlays)))
 
 (defvar tng-keymap
   (let ((map (make-sparse-keymap)))
@@ -661,12 +673,14 @@ We can use this function to `interactive' without needing to call
     (define-key map (kbd "a") #'tng-add-region)
     (define-key map (kbd "r") #'tng--read-chunks)
     (define-key map (kbd "l") #'tng-list-chunks)
-    (define-key map (kbd "]") #'tng-chunk-shift-down)
-    (define-key map (kbd "[") #'tng-chunk-shift-up)
-    (define-key map (kbd "n") #'tng-chunk-expand-upper-down)
-    (define-key map (kbd "p") #'tng-chunk-expand-upper-up)
-    (define-key map (kbd "N") #'tng-chunk-expand-down-down)
-    (define-key map (kbd "P") #'tng-chunk-expand-down-up)
+    (define-key map (kbd "]") #'tng-chunk-move-down)
+    (define-key map (kbd "[") #'tng-chunk-move-up)
+    (define-key map (kbd "n") #'tng-chunk-expand-up)
+    (define-key map (kbd "p") #'tng-chunk-expand-down)
+    (define-key map (kbd "N") #'tng-chunk-shrink-up)
+    (define-key map (kbd "P") #'tng-chunk-shrink-down)
+    (define-key map (kbd "h") #'tng-chunk-rehash)
+    (define-key map (kbd "c") #'tng-chunk-comment)
     map))
 
 (global-set-key (kbd "M-t") tng-keymap)
