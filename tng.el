@@ -280,7 +280,9 @@ RETURNING
     (setq tng--global-last-added-chunk-id (caadr last-added-chunk))
     (dolist (fn tng--post-add-region-functions)
       (funcall fn begin-line end-line)))
-  (deactivate-mark))
+  (deactivate-mark)
+  (tng-delete-overlays)
+  (tng-create-overlays))
 
 (defun tng--update-chunk-begin-end-lines (chunk-id begin-line end-line)
   "Update BEGIN-LINE and END-LINE for chunk where id = CHUNK-ID"
