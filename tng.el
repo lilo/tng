@@ -222,7 +222,7 @@ Argument END-LINE to that."
   "Function to call after new chunk added.
 Takes START and END as arguments.")
 
-;; (add-to-list 'tng--post-add-region-functions #'tng-pulse-region)
+(add-to-list 'tng--post-add-region-functions #'tng-pulse-region)
 
 (defun tng-add-region (arg begin end)
   "Add new resource from the region.
