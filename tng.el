@@ -399,6 +399,13 @@ and after newlines are inserted BEG END _LEN."
         (dolist (fn tng--post-jump-region-functions)
           (funcall fn .start_line .end-line))))))
 
+(defun tng-list-chunks-delete ()
+  "Delete chunk."
+  (interactive)
+  (let-alist (tabulated-list-get-id)
+    (tng--delete-chunk .id))
+  (tng-list-chunks-refresh))
+
 ;; (defvar-keymap tng-list-chunks-mode-map
 ;;   :doc "Keymap for `tng-list-chunks-mode'."
 ;;   :parent tabulated-list-mode-map
@@ -408,6 +415,7 @@ and after newlines are inserted BEG END _LEN."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'tng-list-chunks-jump)
     (define-key map (kbd "C-m") #'tng-list-chunks-jump)
+    (define-key map (kbd "C-k") #'tng-list-chunks-delete)
     map))
 
 (define-derived-mode tng-list-chunks-mode tabulated-list-mode "tng-list-chunks-mode"
