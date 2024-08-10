@@ -680,7 +680,6 @@ We can use this function to `interactive' without needing to call
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "t") #'tng-mode)
     (define-key map (kbd "a") #'tng-add-region)
-    (define-key map (kbd "r") #'tng--read-chunks)
     (define-key map (kbd "l") #'tng-list-chunks)
     (define-key map (kbd "]") #'tng-chunk-move-down)
     (define-key map (kbd "[") #'tng-chunk-move-up)
