@@ -587,12 +587,12 @@ We can use this function to `interactive' without needing to call
 
 (defun tng-select-chunk ()
   (when-let* ((chunks (tng-chunks-at-point))
-                (first-chunk (car chunks)))
-      (if (length= chunks 1)
-          (plist-get (overlay-properties first-chunk) 'tng-chunk-id)
-        (alt-completing-read
-         "Select: "
-         (tng-get-completion-alist chunks)))))
+              (first-chunk (car chunks)))
+    (if (length= chunks 1)
+        (plist-get (overlay-properties first-chunk) 'tng-chunk-id)
+      (alt-completing-read
+       "Select: "
+       (tng-get-completion-alist chunks)))))
 
 (defun tng-chunk-move-up (chunk-id)
   (interactive
