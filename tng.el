@@ -341,7 +341,7 @@ WHERE id = ?"
 
 (define-minor-mode tng-mode
   "Tango mode."
-  :lighter " T"
+  :lighter (:eval (tng-minor-mode-lighter))
   (if tng-mode
       (progn
         (add-hook 'change-major-mode-hook 'tng-delete-overlays nil t)
@@ -721,6 +721,16 @@ RETURNING
   (tng--delete-chunk chunk-id)
   (tng-delete-overlays)
   (tng-create-overlays))
+
+(defun tng-minor-mode-lighter ()
+  "Get lighter.
+T[10]
+T[*]
+T[!]
+T[.]
+T[3/7]
+T[=]"
+  (propertize (format " T[%s]" (length (tng-current-chunks))) 'face 'next-error))
 
 (defvar tng-keymap
   (let ((map (make-sparse-keymap)))
