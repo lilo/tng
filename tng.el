@@ -585,6 +585,17 @@ We can use this function to `interactive' without needing to call
       (push `(,chunk-fmt . ,chunk-id) completions)))
   completions)
 
+(defun tng-get-completion-chunk-alist (chunk-alists)
+  "Return alist '((file:beg:end:comment . chunk-id) ...)"
+  (mapcar
+   (lambda (chunk)
+     (let-alist chunk
+       (let*
+           ((chunk-fmt
+             (format "%s:%d:%d:%s" .filepath .start_line .end_line .comment)))
+         `(,chunk-fmt . ,.id))))
+   chunk-alists))
+
 (defun tng-select-chunk ()
   (when-let* ((chunks (tng-chunks-at-point))
               (first-chunk (car chunks)))
@@ -593,6 +604,41 @@ We can use this function to `interactive' without needing to call
       (alt-completing-read
        "Select: "
        (tng-get-completion-alist chunks)))))
+
+(defun tng-link-chunks (src-chunk-id dst-chunk-id)
+  "Link chunk at point with another chunk."
+  (interactive
+   (let* ((all-chunks (tng-project-chunks))
+          (src-chunk (alt-completing-read "Select SRC: " (tng-get-completion-chunk-alist all-chunks)))
+          (but-src-chunks
+           (-remove
+            (lambda (c) (eq (let-alist c .id) src-chunk))
+            all-chunks))
+          (dst-chunk (alt-completing-read "Select DST: " (tng-get-completion-chunk-alist but-src-chunks))))
+     (list src-chunk dst-chunk)))
+  (message "src: %s dst: %s" src-chunk-id dst-chunk-id)
+  (let* ((all-chunks (tng-project-chunks))
+         (src-chunk (-find (lambda (c) (eq (let-alist c .id) src-chunk-id)) all-chunks))
+         (dst-chunk (-find (lambda (c) (eq (let-alist c .id) dst-chunk-id)) all-chunks))
+         (srcsha1 (let-alist src-chunk .sha1hash))
+         (dstsha1 (let-alist dst-chunk .sha1hash))
+         (directed 1)
+         (flag 1)
+         (comment (read-from-minibuffer "Comment for link: "))
+         (last-added-link
+          (sqlite-select
+           (sqlite-open tng-db-filename)
+           "
+INSERT INTO
+ dep(src,dst,comment,flag,srcsha1,dstsha1,directed)
+VALUES
+ (?,?,?,?,?,?,?)
+RETURNING
+ id"
+           (list src-chunk-id dst-chunk-id comment flag srcsha1 dstsha1 directed)
+           'full)))
+  (tng-delete-overlays)
+  (tng-create-overlays)))
 
 (defun tng-chunk-move-up (chunk-id)
   (interactive
