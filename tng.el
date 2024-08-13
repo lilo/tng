@@ -8,6 +8,7 @@
 ;;; emacsql
 ;;; naming
 ;;; minor-mode-map-alist
+;;; capture and link to note
 ;;; Code:
 
 
