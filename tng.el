@@ -723,6 +723,64 @@ RETURNING
   (tng-delete-overlays)
   (tng-create-overlays))
 
+(defun tng--buffer-downstreams ()
+  "Return alists of all chunks (in current project)."
+  (let* ((db (sqlite-open tng-db-filename))
+         (records (sqlite-select
+                  db
+                  "select * from
+(SELECT c.id as chunk_id, c.start_line, c.end_line, count(d.id) as downstream_count
+from  chunk c left join dep d on c.id = d.src
+group by chunk_id
+order by downstream_count
+)
+where downstream_count > 0"
+                  nil
+                  'full))
+         (header (mapcar #'intern (car records)))
+         (chunks (cdr records)))
+    (mapcar
+     (lambda (chunk) (cl-pairlis header chunk))
+     chunks)))
+
+(defun tng--buffer-upstreams ()
+  "Return alists of all chunks (in current project)."
+  (let* ((db (sqlite-open tng-db-filename))
+         (records (sqlite-select
+                  db
+                  "select * from
+(SELECT c.id as chunk_id, c.start_line, c.end_line, count(d.id) as upstream_count
+from  chunk c left join dep d on c.id = d.dst
+group by chunk_id
+order by upstream_count
+)
+where upstream_count > 0"
+                  nil
+                  'full))
+         (header (mapcar #'intern (car records)))
+         (chunks (cdr records)))
+    (mapcar
+     (lambda (chunk) (cl-pairlis header chunk))
+     chunks)))
+
+
+(defun tng--buffer-status ()
+  "Get status for the buffer.
+- chunks that have links
+- overlapped chunks
+- changed chunks
+"
+  (let* ((chunks (tng-current-chunks))
+         (downstreams (tng--buffer-downstreams))
+         links overlaps dangling changed upstream downstream)
+    `((chunks . ,chunks)
+      (downstreams . ,downstreams)
+      (upstreams . ,upstreams)
+      (links . ,links)
+      (overlaps . ,overlaps)
+      (dangling . ,dangling)
+      (changed . ,changed))))
+
 (defun tng-minor-mode-lighter ()
   "Get lighter.
 T[10]
