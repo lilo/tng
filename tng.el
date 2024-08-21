@@ -805,6 +805,7 @@ T[=]"
     (define-key map (kbd "h") #'tng-chunk-rehash)
     (define-key map (kbd "c") #'tng-chunk-comment)
     (define-key map (kbd "C-k") #'tng-chunk-delete)
+    (define-key map (kbd "C-c") #'tng-link-chunks)
     map))
 
 (global-set-key (kbd "M-t") tng-keymap)
