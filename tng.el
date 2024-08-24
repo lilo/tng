@@ -1,14 +1,7 @@
 ;;; package --- tng.el -*- lexical-binding:t; coding:utf-8 -*-
+;; Copyright (C) 2024 Sergey Lilo
+;; Author: Sergey Lilo
 ;;; Commentary:
-;;; Package-Requires: ((dash "2.19.1"))
-;;; TODO:
-;;; rename start/begin
-;;; rename start_line, end_line
-;;; replace chunk (keeping deps)
-;;; emacsql
-;;; naming
-;;; minor-mode-map-alist
-;;; capture and link to note
 ;;; Code:
 
 
