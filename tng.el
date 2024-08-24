@@ -233,7 +233,7 @@ Argument BEGIN from here.
 Argument END to here."
   (interactive "P\nr")
   (let* ((region (region-active-p))
-         (begin-line (line-number-at-pos (if region begin) t))
+         (begin-line (line-number-at-pos (if region begin) :absolute))
          (begin-pos (save-excursion
                       (goto-char (point-min))
                       (forward-line (1- begin-line))
@@ -247,7 +247,7 @@ Argument END to here."
                             (when (bolp)
                               (forward-line -1))
                             (end-of-line)
-                            (point)))) t))
+                            (point)))) :absolute))
          (end-pos (save-excursion
                       (goto-char (point-min))
                       (forward-line (1- end-line))
