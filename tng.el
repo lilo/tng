@@ -1,8 +1,26 @@
-;;; package --- tng.el -*- lexical-binding:t; coding:utf-8 -*-
+;;; package --- tng.el Track dependencies across your code -*- lexical-binding:t; coding:utf-8 -*-
 ;; Copyright (C) 2024 Sergey Lilo
-;; Author: Sergey Lilo
+;; Author: Sergey Lilo <s3rg31110@gmail.com>
+;; URL: https://github.com/lilo/tng.el
+
+;; This file is NOT part of GNU Emacs.
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 ;;; Commentary:
 ;;; Code:
+
 
 
 (require 'cl-lib)
