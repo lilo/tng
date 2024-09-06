@@ -356,11 +356,11 @@ WHERE id = ?"
   :lighter (:eval (tng-minor-mode-lighter))
   (if tng-mode
       (progn
-        (add-hook 'change-major-mode-hook 'tng-delete-overlays nil t)
-        (add-hook 'after-change-functions 'tng-after-change t t)
+        (add-hook 'change-major-mode-hook 'tng-delete-overlays (not :depth) :local)
+        (add-hook 'after-change-functions 'tng-after-change :depth :local)
         (tng-create-overlays))
-    (remove-hook 'after-change-functions 'tng-after-change t)
-    (remove-hook 'change-major-mode-hook 'tng-delete-overlays t)
+    (remove-hook 'after-change-functions 'tng-after-change :local)
+    (remove-hook 'change-major-mode-hook 'tng-delete-overlays :local)
     (tng-delete-overlays)))
 
 (defun tng-after-change (beg end _len)
