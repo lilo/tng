@@ -740,7 +740,7 @@ RETURNING
          (records (sqlite-select
                   db
                   "select * from
-(SELECT c.id as chunk_id, c.start_line, c.end_line, count(d.id) as downstream_count
+(select c.id as chunk_id, c.start_line, c.end_line, count(d.id) as downstream_count
 from  chunk c left join dep d on c.id = d.src
 group by chunk_id
 order by downstream_count
