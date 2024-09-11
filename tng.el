@@ -644,13 +644,15 @@ RETURNING
   (interactive
    (list (tng-select-chunk)))
   (when chunk-id
-    (tng-chunk-resize chunk-id :begin -1 :end -1)))
+    (tng-chunk-resize chunk-id :begin -1 :end -1)
+    (forward-line -1)))
 
 (defun tng-chunk-move-down (chunk-id)
   (interactive
    (list (tng-select-chunk)))
   (when chunk-id
-    (tng-chunk-resize chunk-id :begin +1 :end +1)))
+    (tng-chunk-resize chunk-id :begin +1 :end +1)
+    (forward-line +1)))
 
 (defun tng-chunk-expand-up (chunk-id)
   (interactive
