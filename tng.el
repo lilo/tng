@@ -527,18 +527,6 @@ and after newlines are inserted BEG END _LEN."
     (tng-list-chunks-mode)
     (tng-list-chunks-refresh)))
 
-(defun tng-link-select-chunk (chunk)
-  "Display a list of chunks for linking the CHUNK.
-DIRECTION is 'src or 'dst."
-  (interactive)
-  (let* ((current-chunk ())
-         (buf
-          (get-buffer-create
-           (format "*TNG connect %s*" (tng--current-filepath)))))
-    (switch-to-buffer buf)
-    (tng-link-)
-    (tng-list-chunks-refresh)))
-
 
 ;; https://www.howardism.org/Technical/Emacs/alt-completing-read.html
 (defun alt-completing-read (prompt collection &optional predicate require-match initial-input hist def inherit-input-method)
