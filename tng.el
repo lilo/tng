@@ -760,7 +760,7 @@ where downstream_count > 0"
          (records (sqlite-select
                   db
                   "select * from
-(SELECT c.id as chunk_id, c.start_line, c.end_line, count(d.id) as upstream_count
+(select c.id as chunk_id, c.start_line, c.end_line, count(d.id) as upstream_count
 from  chunk c left join dep d on c.id = d.dst
 group by chunk_id
 order by upstream_count
