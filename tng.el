@@ -26,8 +26,8 @@
 (require 'cl-lib)
 (require 'dash)
 
-(defvar-local tng--overlays-hash-table (make-hash-table)
-  "The hash-table.")
+(defvar-local tng--status nil
+  "Current buffer status as alist.")
 
 (defvar-local tng-project-dir (project-root (project-current))
   "Root of current project.")
@@ -49,15 +49,6 @@
   "Use fringes indicators."
   :group 'tng
   :type 'boolean)
-
-(defvar-local tng--last-added-chunk-id nil
-  "Last added chunk id.")
-
-(defvar tng--global-last-added-chunk-id nil
-  "Global last added chunk id.")
-
-(defvar-local tng--effective-chunk-id nil
-  "Current effective chunk id.")
 
 (defun tng--current-filepath ()
   "Return relative path for file in current buffer."
@@ -138,13 +129,13 @@ Argument END-LINE to that."
      (lambda (chunk) (cl-pairlis header chunk))
      chunks)))
 
-(defun tng-project-chunks ()
-  "Return alists of all chunks (in current project)."
+(defun tng--file-chunks (filepath)
+  "Return alists of chunks in FILEPATH (relative to the project's root)."
   (let* ((db (sqlite-open tng-db-filename))
          (records (sqlite-select
                   db
-                  "select id,filepath,start_line,end_line,comment,sha1hash from chunk"
-                  nil
+                  "select id,filepath,start_line,end_line,comment,sha1hash from chunk where filepath=?"
+                  (list filepath)
                   'full))
          (header (mapcar #'intern (car records)))
          (chunks (cdr records)))
@@ -152,89 +143,31 @@ Argument END-LINE to that."
      (lambda (chunk) (cl-pairlis header chunk))
      chunks)))
 
-(defun tng-make-overlay (chunk)
-  (let-alist chunk
-    (let* ((reg (tng--line-rectangle .start_line .end_line))
-           (begin (car reg))
-           (end (cdr reg))
-           (sha1hashfact
-            (sha1 (buffer-substring-no-properties begin end)))
-           (diff-flag (not (string-equal sha1hashfact .sha1hash)))
-           (ov-in-overlays-table
-            (gethash
-             .id tng--overlays-hash-table))
-           (ov
-            (or
-             ov-in-overlays-table
-             (make-overlay begin end)))
-           (ov-begin-marker
-            (or
-             (overlay-get ov 'tng-begin-marker)
-             (prog1
-                 (setq marker (make-marker))
-               (set-marker marker begin))))
-           (ov-end-marker
-            (or
-             (overlay-get ov 'tng-end-marker)
-             (prog1 (setq marker (make-marker)) (set-marker marker end))))
-           (ov-markers-sha1
-            (sha1
-             (buffer-substring-no-properties
-              ov-begin-marker ov-end-marker)))
-           (moved-flag
-            (and
-             diff-flag
-             (string-equal ov-markers-sha1 .sha1hash)))
-           (ov-face
-            (cond (moved-flag 'diff-refine-changed)
-                  (diff-flag 'diff-refine-removed)
-                  (t 'highlight)))
-           (left-fringe
-            (cond (moved-flag '(left-fringe up-arrow shr-mark))
-                  (diff-flag '(left-fringe question-mark dired-flagged))
-                  (t '(left-fringe large-circle shadow)))))
-      (prog1 ov
-        (overlay-put ov 'tng-chunk-id .id)
-        (overlay-put ov 'tng-chunk chunk)
-        (overlay-put ov 'tng-moved-flag moved-flag)
-        (overlay-put ov 'tng-begin-line (line-number-at-pos ov-begin-marker))
-        (overlay-put ov 'tng-end-line (1- (line-number-at-pos ov-end-marker)))
-        (overlay-put ov 'tng-begin-marker ov-begin-marker)
-        (overlay-put ov 'tng-end-marker ov-end-marker)
-        (overlay-put ov 'face ov-face)
-        (when tng-use-fringes
-          (overlay-put ov 'before-string
-                       (propertize
-                        " " 'display
-                        left-fringe)))))))
+(defun tng-project-chunks ()
+  "Return alists of all chunks (in current project)."
+  (let* ((db (sqlite-open tng-db-filename))
+         (records (sqlite-select
+                  db
+                  "select id,filepath,start_line,end_line,comment,sha1hash from chunk"
+                  (not :values)
+                  'full))
+         (header (mapcar #'intern (car records)))
+         (chunks (cdr records)))
+    (mapcar
+     (lambda (chunk) (cl-pairlis header chunk))
+     chunks)))
 
-
-(defun tng-auto-fix-moved ()
-  "Update moved chunks' start-line and end-line."
-  (dolist (k (hash-table-keys tng--overlays-hash-table))
-    (let ((ov (gethash k tng--overlays-hash-table)))
-      (when (overlay-get ov 'tng-moved-flag)
-        (let ((chunk-id (overlay-get ov 'tng-chunk-id))
-              (begin-line (overlay-get ov 'tng-begin-line))
-              (end-line (overlay-get ov 'tng-end-line)))
-          (tng--update-chunk-begin-end-lines chunk-id begin-line end-line)
-          (overlay-put ov 'tng-moved-flag nil)
-          (overlay-put ov 'tng-begin-marker nil)
-          (overlay-put ov 'tng-end-marker nil))))))
-
-(defun tng-create-overlays ()
-  "Create overlays for chunks in current buffer."
-  (interactive)
-  (dolist (chunk (tng-current-chunks))
-    (let* ((ov (tng-make-overlay chunk))
-          (chunk-id (overlay-get ov 'tng-chunk-id)))
-      (puthash chunk-id ov tng--overlays-hash-table))))
 
 (defvar tng--post-add-region-functions nil
   "Function to call after new chunk added.
 Takes START and END as arguments.")
 
+(defun tng--refresh-status-after-chunk-add (&rest _)
+  "Refresh"
+  (tng--refresh-current-buffer-status))
+
 (add-to-list 'tng--post-add-region-functions #'tng-pulse-region)
+(add-to-list 'tng--post-add-region-functions #'tng--refresh-status-after-chunk-add)
 
 (defun tng-add-region (arg begin end)
   "Add new resource from the region.
@@ -288,13 +221,9 @@ RETURNING
  id"
            (list filepath sha1-hash comment begin-line end-line)
            'full)))
-    (setq-local tng--last-added-chunk-id (caadr last-added-chunk))
-    (setq tng--global-last-added-chunk-id (caadr last-added-chunk))
     (dolist (fn tng--post-add-region-functions)
       (funcall fn begin-line end-line)))
-  (deactivate-mark)
-  (tng-delete-overlays)
-  (tng-create-overlays))
+  (deactivate-mark))
 
 (defun tng--update-chunk-begin-end-lines (chunk-id begin-line end-line)
   "Update BEGIN-LINE and END-LINE for chunk where id = CHUNK-ID"
@@ -309,74 +238,57 @@ WHERE id = ?
 RETURNING
  id"
      (list begin-line end-line chunk-id)
-     nil)))
+     (not 'return-value))))
 
 (defun tng--update-chunk-hash (chunk-id sha1hash)
   "Update SHA1HASH for chunk where id = CHUNK-ID"
-  (let ((ov (gethash chunk-id tng--overlays-hash-table)))
-    (sqlite-select
-     (sqlite-open tng-db-filename)
-     "
+  (sqlite-select
+   (sqlite-open tng-db-filename)
+   "
 UPDATE chunk
 SET sha1hash = ?
 WHERE id = ?
 RETURNING
  id"
-     (list sha1hash chunk-id)
-     nil)))
+   (list sha1hash chunk-id)
+   nil))
 
 (defun tng--update-chunk-comment (chunk-id comment)
   "Update COMMENT for chunk where id = CHUNK-ID"
-  (let ((ov (gethash chunk-id tng--overlays-hash-table)))
-    (sqlite-select
-     (sqlite-open tng-db-filename)
-     "
+  (sqlite-select
+   (sqlite-open tng-db-filename)
+   "
 UPDATE chunk
 SET comment = ?
 WHERE id = ?
 RETURNING
  id"
-     (list comment chunk-id)
-     nil)))
+   (list comment chunk-id)
+   nil))
 
 (defun tng--delete-chunk (chunk-id)
   "Delete chunk where id = CHUNK-ID."
-  (let ((ov (gethash chunk-id tng--overlays-hash-table)))
-    (sqlite-select
-     (sqlite-open tng-db-filename)
-     "
+  (sqlite-select
+   (sqlite-open tng-db-filename)
+   "
 DELETE FROM chunk
 WHERE id = ?"
-     (list chunk-id)
-     nil)))
-
+   (list chunk-id)
+   nil))
 
+
 (define-minor-mode tng-mode
   "Tango mode."
   :lighter (:eval (tng-minor-mode-lighter))
   (if tng-mode
       (progn
-        (add-hook 'change-major-mode-hook 'tng-delete-overlays (not :depth) :local)
+        (tng--refresh-current-buffer-status)
         (add-hook 'after-change-functions 'tng-after-change :depth :local)
-        (tng-create-overlays))
-    (remove-hook 'after-change-functions 'tng-after-change :local)
-    (remove-hook 'change-major-mode-hook 'tng-delete-overlays :local)
-    (tng-delete-overlays)))
+    (remove-hook 'after-change-functions 'tng-after-change :local))))
 
 (defun tng-after-change (beg end _len)
   "Update overlays on deletions,
-and after newlines are inserted BEG END _LEN."
-  (tng-create-overlays)
-  (when tng-auto-fix-moved-chunks
-    (tng-auto-fix-moved))
-    (tng-create-overlays))
-
-(defun tng-delete-overlays ()
-  "Delete tng overlays."
-  (maphash
-   (lambda (k v) (delete-overlay v))
-   tng--overlays-hash-table)
-  (clrhash tng--overlays-hash-table))
+and after newlines are inserted BEG END _LEN.")
 
 
 (defun tng-list-chunks-refresh ()
@@ -418,11 +330,6 @@ and after newlines are inserted BEG END _LEN."
     (tng--delete-chunk .id))
   (tng-list-chunks-refresh))
 
-;; (defvar-keymap tng-list-chunks-mode-map
-;;   :doc "Keymap for `tng-list-chunks-mode'."
-;;   :parent tabulated-list-mode-map
-;;   "C-m" #'tng-list-chunks-jump)
-
 (defvar tng-list-chunks-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'tng-list-chunks-jump)
@@ -440,8 +347,8 @@ and after newlines are inserted BEG END _LEN."
 			       ("filename" 12 t)
                                ("pos" 8 t)
 			       ("comment"  25 t)])
-  (setq tabulated-list-sort-key (cons "filename" nil))
-  (add-hook 'tabulated-list-revert-hook #'tng-list-chunks-refresh nil t))
+  (setq tabulated-list-sort-key (cons "filename" (not :invert)))
+  (add-hook 'tabulated-list-revert-hook #'tng-list-chunks-refresh (not :depth) :local))
 
 (put 'tng-list-chunks-mode 'mode-class 'special)
 
@@ -453,81 +360,6 @@ and after newlines are inserted BEG END _LEN."
     (tng-list-chunks-mode)
     (tng-list-chunks-refresh)))
 
-;; list chunks: project, file
-;; status: Src, Dst, Both
-;; status: Modified, Unfixed, Fixed
-
-
-(defun tng-link-chunks-list-refresh ()
-  "Refresh list of chunks."
-  (let* ((chunks (tng-project-chunks)))
-    (cl-flet
-        ((tabulate-chunk (chunk)
-           (let-alist chunk
-             (list
-              chunk
-              (vector
-               (list
-                (number-to-string .id)
-                'face 'default
-                'action (lambda (_button) (tng-list-chunks-jump)))
-               (list .filepath) (list (format "%s:%s" .start_line .end_line)) (list .comment)))))))
-    (setq tabulated-list-entries (mapcar #'tabulate-chunk chunks))
-    (tabulated-list-init-header)
-    (tabulated-list-print)))
-
-(defun tng-link-chunks-ret ()
-  "Handle RET."
-  (interactive)
-  (let* ((chunk (tabulated-list-get-id))
-         (filepath (alist-strget 'filepath chunk))
-         (start-line (alist-strget 'start_line chunk))
-         (end-line (alist-strget 'end_line chunk))
-         (buf (find-file-noselect filepath))
-         ;; #'pop-to-buffer-same-window)))
-         (display-buffer-fn #'switch-to-buffer-other-window))
-    (funcall display-buffer-fn buf)
-    (with-current-buffer buf
-      (widen)
-      (goto-line start-line)
-      (dolist (fn tng--post-jump-region-functions)
-        (funcall fn start-line end-line)))))
-
-;; (defvar-keymap tng-list-chunks-mode-map
-;;   :doc "Keymap for `tng-list-chunks-mode'."
-;;   :parent tabulated-list-mode-map
-;;   "C-m" #'tng-list-chunks-jump)
-
-(defvar tng-list-chunks-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") #'tng-list-chunks-jump)
-    (define-key map (kbd "C-m") #'tng-list-chunks-jump)
-    map))
-
-(define-derived-mode tng-list-chunks-mode tabulated-list-mode "tng-list-chunks-mode"
-  "Major mode for listing chunks.
-\\<tng-list-chunks-mode-map>
-\\{tng-list-chunks-mode-map}"
-  (setq truncate-lines t)
-  (setq buffer-read-only t)
-  (setq tabulated-list-format [("id" 4 t)
-			       ("filename" 12 t)
-                               ("pos" 8 t)
-			       ("comment"  25 t)])
-  (setq tabulated-list-sort-key (cons "filename" nil))
-  (add-hook 'tabulated-list-revert-hook #'tng-list-chunks-refresh nil t))
-
-(put 'tng-list-chunks-mode 'mode-class 'special)
-
-(defun tng-list-chunks ()
-  "Display a list of existing chunks."
-  (interactive)
-  (let ((buf (get-buffer-create "* TNG chunks*")))
-    (switch-to-buffer buf)
-    (tng-list-chunks-mode)
-    (tng-list-chunks-refresh)))
-
-
 ;; https://www.howardism.org/Technical/Emacs/alt-completing-read.html
 (defun alt-completing-read (prompt collection &optional predicate require-match initial-input hist def inherit-input-method)
   "Calls `completing-read' but returns the value from COLLECTION.
@@ -561,30 +393,6 @@ We can use this function to `interactive' without needing to call
                      (t                         choice))))
       (if (listp results) (first results) results))))
 
-
-(defun tng-chunks-at-point ()
-  "Return list of tng chunks that include current point."
-  (let* ((overlays (overlays-at (point))))
-    (-filter
-     (lambda (o) (plist-member (overlay-properties o) 'tng-chunk-id))
-     overlays)))
-
-(defun tng-get-completion-alist (tng-overlays)
-  "Return alist '((file:beg:end:comment . chunk-id) ...)"
-  (setq completions nil) ; TODO:
-  (dolist (chunk-ov tng-overlays)
-    (let*
-        ((chunk-alist (plist-get (overlay-properties chunk-ov) 'tng-chunk))
-         (filename (alist-get 'filepath chunk-alist))
-         (comment (alist-get 'comment chunk-alist))
-         (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
-         (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line))
-         (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
-         (chunk-fmt
-          (format "%s:%d:%d:%s" filename begin-line end-line comment)))
-      (push `(,chunk-fmt . ,chunk-id) completions)))
-  completions)
-
 (defun tng-get-completion-chunk-alist (chunk-alists)
   "Return alist '((file:beg:end:comment . chunk-id) ...)"
   (mapcar
@@ -616,7 +424,6 @@ We can use this function to `interactive' without needing to call
             all-chunks))
           (dst-chunk (alt-completing-read "Select DST: " (tng-get-completion-chunk-alist but-src-chunks))))
      (list src-chunk dst-chunk)))
-  (message "src: %s dst: %s" src-chunk-id dst-chunk-id)
   (let* ((all-chunks (tng-project-chunks))
          (src-chunk (-find (lambda (c) (eq (let-alist c .id) src-chunk-id)) all-chunks))
          (dst-chunk (-find (lambda (c) (eq (let-alist c .id) dst-chunk-id)) all-chunks))
@@ -636,9 +443,7 @@ VALUES
 RETURNING
  id"
            (list src-chunk-id dst-chunk-id comment flag srcsha1 dstsha1 directed)
-           'full)))
-  (tng-delete-overlays)
-  (tng-create-overlays)))
+           'full)))))
 
 (defun tng-chunk-move-up (chunk-id)
   (interactive
@@ -678,102 +483,14 @@ RETURNING
   (when chunk-id
     (tng-chunk-resize chunk-id :begin 0 :end -1)))
 
-(cl-defun tng-chunk-resize (chunk-id &key begin end)
-  "Update chunk, increasing or decreasing its boundaries."
-  (when-let*
-      ((chunk-ov (gethash chunk-id tng--overlays-hash-table))
-       (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
-       (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line)))
-    (tng--update-chunk-begin-end-lines
-     chunk-id
-     (+ begin-line begin) (+ end-line end))
-    (tng-delete-overlays)
-    (tng-create-overlays)))
-
-(defun tng-chunk-rehash (chunk-id)
-  (interactive
-   (list (tng-select-chunk)))
-  (when-let* ((ov (gethash chunk-id tng--overlays-hash-table))
-              (start (plist-get (overlay-properties ov) 'tng-begin-marker))
-              (end (plist-get (overlay-properties ov) 'tng-end-marker))
-              (new-sha1hash (sha1 (buffer-substring-no-properties start end))))
-    (tng--update-chunk-hash chunk-id new-sha1hash)
-    (tng-delete-overlays)
-    (tng-create-overlays)))
-
-(defun tng-chunk-comment (chunk-id)
-  (interactive
-   (list (tng-select-chunk)))
-  (when-let* ((ov (gethash chunk-id tng--overlays-hash-table))
-              (current-comment
-               (let-alist
-                   (plist-get (overlay-properties ov) 'tng-chunk)
-                 .comment)))
-    (message "Current comment: %s" current-comment)
-    (sit-for 1.5) ; TODO:
-    (tng--update-chunk-comment
-     chunk-id
-     (read-from-minibuffer "New comment: "))
-    (tng-delete-overlays)
-    (tng-create-overlays)))
-
-(defun tng-chunk-delete (chunk-id)
-  (interactive
-   (list (tng-select-chunk)))
-  (tng--delete-chunk chunk-id)
-  (tng-delete-overlays)
-  (tng-create-overlays))
-
-(defun tng--buffer-downstreams ()
-  "Return alists of all chunks (in current project)."
-  (let* ((db (sqlite-open tng-db-filename))
-         (records (sqlite-select
-                  db
-                  "select * from
-(select c.id as chunk_id, c.start_line, c.end_line, count(d.id) as downstream_count
-from  chunk c left join dep d on c.id = d.src
-group by chunk_id
-order by downstream_count
-)
-where downstream_count > 0"
-                  nil
-                  'full))
-         (header (mapcar #'intern (car records)))
-         (chunks (cdr records)))
-    (mapcar
-     (lambda (chunk) (cl-pairlis header chunk))
-     chunks)))
-
-(defun tng--buffer-upstreams ()
-  "Return alists of all chunks (in current project)."
-  (let* ((db (sqlite-open tng-db-filename))
-         (records (sqlite-select
-                  db
-                  "select * from
-(select c.id as chunk_id, c.start_line, c.end_line, count(d.id) as upstream_count
-from  chunk c left join dep d on c.id = d.dst
-group by chunk_id
-order by upstream_count
-)
-where upstream_count > 0"
-                  nil
-                  'full))
-         (header (mapcar #'intern (car records)))
-         (chunks (cdr records)))
-    (mapcar
-     (lambda (chunk) (cl-pairlis header chunk))
-     chunks)))
-
-
-(defun tng--buffer-status ()
-  "Get status for the buffer.
+(defun tng--file-status (filepath)
+  "Get status for FILEPATH (relative to the project's root).
 - chunks that have links
 - overlapped chunks
 - changed chunks
 "
-  (let* ((chunks (tng-current-chunks))
-         (downstreams (tng--buffer-downstreams))
-         links overlaps dangling changed upstream downstream)
+  (let* ((chunks (tng--file-chunks filepath))
+         links overlaps dangling changed upstreams downstreams)
     `((chunks . ,chunks)
       (downstreams . ,downstreams)
       (upstreams . ,upstreams)
@@ -781,6 +498,11 @@ where upstream_count > 0"
       (overlaps . ,overlaps)
       (dangling . ,dangling)
       (changed . ,changed))))
+
+(defun tng--refresh-current-buffer-status ()
+  "Set local variable tng--status."
+  (setq-local tng--status (tng--file-status
+                           (tng--current-filepath))))
 
 (defun tng-minor-mode-lighter ()
   "Get lighter.
@@ -790,7 +512,7 @@ T[!]
 T[.]
 T[3/7]
 T[=]"
-  (propertize (format " T[%s]" (length (tng-current-chunks))) 'face 'next-error))
+  (propertize (format " T[%s]" (length (alist-get 'chunks tng--status))) 'face 'next-error))
 
 (defvar-keymap tng-repeat-keymap
   :repeat t
