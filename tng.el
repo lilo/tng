@@ -792,22 +792,24 @@ T[3/7]
 T[=]"
   (propertize (format " T[%s]" (length (tng-current-chunks))) 'face 'next-error))
 
-(defvar tng-keymap
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "t") #'tng-mode)
-    (define-key map (kbd "a") #'tng-add-region)
-    (define-key map (kbd "l") #'tng-list-chunks)
-    (define-key map (kbd "]") #'tng-chunk-move-down)
-    (define-key map (kbd "[") #'tng-chunk-move-up)
-    (define-key map (kbd "P") #'tng-chunk-expand-up)
-    (define-key map (kbd "N") #'tng-chunk-expand-down)
-    (define-key map (kbd "n") #'tng-chunk-shrink-up)
-    (define-key map (kbd "p") #'tng-chunk-shrink-down)
-    (define-key map (kbd "h") #'tng-chunk-rehash)
-    (define-key map (kbd "c") #'tng-chunk-comment)
-    (define-key map (kbd "C-k") #'tng-chunk-delete)
-    (define-key map (kbd "C-c") #'tng-link-chunks)
-    map))
+(defvar-keymap tng-repeat-keymap
+  :repeat t
+  "]" #'tng-chunk-move-down
+  "[" #'tng-chunk-move-up
+  "P" #'tng-chunk-expand-up
+  "N" #'tng-chunk-expand-down
+  "n" #'tng-chunk-shrink-up
+  "p" #'tng-chunk-shrink-down)
+
+(defvar-keymap tng-keymap
+  :parent tng-repeat-keymap
+  "t" #'tng-mode
+  "a" #'tng-add-region
+  "l" #'tng-list-chunks
+  "h" #'tng-chunk-rehash
+  "c" #'tng-chunk-comment
+  "C-k" #'tng-chunk-delete
+  "C-c" #'tng-link-chunks)
 
 (global-set-key (kbd "M-t") tng-keymap)
 
