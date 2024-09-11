@@ -116,18 +116,8 @@ Argument END-LINE to that."
 
 (defun tng-current-chunks ()
   "Return alists of all chunks in current file."
-  (let* ((filepath (tng--current-filepath))
-         (db (sqlite-open tng-db-filename))
-         (records (sqlite-select
-                  db
-                  "select id,filepath,start_line,end_line,comment,sha1hash from chunk where filepath=?"
-                  (list filepath)
-                  'full))
-         (header (mapcar #'intern (car records)))
-         (chunks (cdr records)))
-    (mapcar
-     (lambda (chunk) (cl-pairlis header chunk))
-     chunks)))
+  (let* ((filepath (tng--current-filepath)))
+    (tng--file-chunks filepath)))
 
 (defun tng--file-chunks (filepath)
   "Return alists of chunks in FILEPATH (relative to the project's root)."
@@ -224,21 +214,21 @@ RETURNING
     (dolist (fn tng--post-add-region-functions)
       (funcall fn begin-line end-line)))
   (deactivate-mark))
+
 
 (defun tng--update-chunk-begin-end-lines (chunk-id begin-line end-line)
   "Update BEGIN-LINE and END-LINE for chunk where id = CHUNK-ID"
-  (let ((ov (gethash chunk-id tng--overlays-hash-table)))
-    (sqlite-select
-     (sqlite-open tng-db-filename)
-     "
+  (sqlite-select
+   (sqlite-open tng-db-filename)
+   "
 UPDATE chunk
 SET start_line = ?,
     end_line = ?
 WHERE id = ?
 RETURNING
  id"
-     (list begin-line end-line chunk-id)
-     (not 'return-value))))
+   (list begin-line end-line chunk-id)
+   (not 'return-value)))
 
 (defun tng--update-chunk-hash (chunk-id sha1hash)
   "Update SHA1HASH for chunk where id = CHUNK-ID"
@@ -287,8 +277,7 @@ WHERE id = ?"
     (remove-hook 'after-change-functions 'tng-after-change :local))))
 
 (defun tng-after-change (beg end _len)
-  "Update overlays on deletions,
-and after newlines are inserted BEG END _LEN.")
+  "BEG END _LEN.")
 
 
 (defun tng-list-chunks-refresh ()
@@ -403,15 +392,6 @@ We can use this function to `interactive' without needing to call
              (format "%s:%d:%d:%s" .filepath .start_line .end_line .comment)))
          `(,chunk-fmt . ,.id))))
    chunk-alists))
-
-(defun tng-select-chunk ()
-  (when-let* ((chunks (tng-chunks-at-point))
-              (first-chunk (car chunks)))
-    (if (length= chunks 1)
-        (plist-get (overlay-properties first-chunk) 'tng-chunk-id)
-      (alt-completing-read
-       "Select: "
-       (tng-get-completion-alist chunks)))))
 
 (defun tng-link-chunks (src-chunk-id dst-chunk-id)
   "Link chunk at point with another chunk."
