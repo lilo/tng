@@ -273,11 +273,16 @@ WHERE id = ?"
   (if tng-mode
       (progn
         (tng--refresh-current-buffer-status)
-        (add-hook 'after-change-functions 'tng-after-change :depth :local)
-    (remove-hook 'after-change-functions 'tng-after-change :local))))
+        (tng--refresh-indicators)
+        (add-hook 'after-change-functions 'tng-after-change :depth :local))
+    (remove-hook 'after-change-functions 'tng-after-change :local)
+    (setq tng--status nil)
+    (mapc #'delete-overlay (car (overlay-lists)))))
 
 (defun tng-after-change (beg end _len)
-  "BEG END _LEN.")
+  "BEG END _LEN."
+  (tng--refresh-current-buffer-status)
+  (tng--refresh-indicators))
 
 
 (defun tng-list-chunks-refresh ()
@@ -463,26 +468,54 @@ RETURNING
   (when chunk-id
     (tng-chunk-resize chunk-id :begin 0 :end -1)))
 
-(defun tng--file-status (filepath)
-  "Get status for FILEPATH (relative to the project's root).
-- chunks that have links
-- overlapped chunks
-- changed chunks
-"
-  (let* ((chunks (tng--file-chunks filepath))
-         links overlaps dangling changed upstreams downstreams)
+(defun tng--current-buffer-status ()
+  (let* ((chunks (tng--file-chunks (tng--current-filepath)))
+         changed out good)
+    (dolist (c chunks)
+      (let-alist c
+        (let* ((chunk-rectangle (tng--line-rectangle .start_line .end_line))
+               (chunk-bol (car chunk-rectangle))
+               (chunk-eol (cdr chunk-rectangle))
+               (eob (point-max)))
+          (if (> chunk-eol eob)
+              (push c out)
+            (let ((sha1 (sha1 (buffer-substring-no-properties chunk-bol chunk-eol))))
+              (if (string-equal sha1 .sha1hash)
+                  (push c good)
+                  (push c changed)))))))
     `((chunks . ,chunks)
-      (downstreams . ,downstreams)
-      (upstreams . ,upstreams)
-      (links . ,links)
-      (overlaps . ,overlaps)
-      (dangling . ,dangling)
-      (changed . ,changed))))
+      (good . ,good)
+      (changed . ,changed)
+      (out . ,out))))
+
+(defun tng--create-overlay (chunk plist)
+  (let-alist chunk
+    (let* ((chunk-rectangle (tng--line-rectangle .start_line .end_line))
+           (boc (car chunk-rectangle))
+           (eoc (cdr chunk-rectangle))
+           (ov (make-overlay boc eoc)))
+      (prog1 ov
+        (cl-loop for (k v) on plist by #'cddr
+                 do (overlay-put ov k v))))))
+
+(defun tng--refresh-indicators ()
+  "Re-create overlays."
+  (let-alist tng--status
+    (dolist (cc .changed)
+      (tng--create-overlay
+       cc
+       `(face custom-changed
+         before-string ,(propertize " " 'display '(left-fringe question-mark shadow)))))
+    (dolist (gc .good)
+      (tng--create-overlay
+       gc
+       `(face highlight
+         before-string ,(propertize " " 'display '(left-fringe large-circle shadow)))))))
 
 (defun tng--refresh-current-buffer-status ()
   "Set local variable tng--status."
-  (setq-local tng--status (tng--file-status
-                           (tng--current-filepath))))
+  (setq-local tng--status (tng--current-buffer-status)))
+
 
 (defun tng-minor-mode-lighter ()
   "Get lighter.
@@ -492,7 +525,12 @@ T[!]
 T[.]
 T[3/7]
 T[=]"
-  (propertize (format " T[%s]" (length (alist-get 'chunks tng--status))) 'face 'next-error))
+  (let-alist tng--status
+    (let* ((all (length .chunks))
+           (good (length .good))
+           (changed (length .changed))
+           (out (length .out)))
+      (propertize (format " T[%d/%d/%d/%d]" all good changed out) 'face 'next-error))))
 
 (defvar-keymap tng-repeat-keymap
   :repeat t
