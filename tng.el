@@ -505,12 +505,14 @@ RETURNING
       (tng--create-overlay
        cc
        `(face custom-changed
-         before-string ,(propertize " " 'display '(left-fringe question-mark shadow)))))
+         before-string ,(propertize " " 'display '(left-fringe question-mark shadow))
+         tng-chunk-id ,(let-alist cc .id))))
     (dolist (gc .good)
       (tng--create-overlay
        gc
        `(face highlight
-         before-string ,(propertize " " 'display '(left-fringe large-circle shadow)))))))
+         before-string ,(propertize " " 'display '(left-fringe large-circle shadow))
+         tng-chunk-id ,(let-alist gc .id))))))
 
 (defun tng--refresh-current-buffer-status ()
   "Set local variable tng--status."
