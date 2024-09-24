@@ -521,13 +521,14 @@ We can use this function to `interactive' without needing to call
                      (t                         choice))))
       (if (listp results) (first results) results))))
 
-
 (defun tng-chunks-at-point ()
   "Return list of tng chunks that include current point."
-  (let* ((overlays (overlays-at (point))))
-    (-filter
-     (lambda (o) (plist-member (overlay-properties o) 'tng-chunk-id))
-     overlays)))
+  (let* ((overlays (overlays-at (point)))
+         (tng-overlays
+          (-filter
+           (lambda (o) (plist-member (overlay-properties o) 'tng-chunk))
+           overlays)))
+    (mapcar (lambda (o) (overlay-get o 'tng-chunk)))))
 
 (defun tng-get-completion-alist (tng-overlays)
   "Return alist '((file:beg:end:comment . chunk-id) ...)"
@@ -565,7 +566,6 @@ We can use this function to `interactive' without needing to call
        "Select: "
        (tng-get-completion-alist chunks)))))
 
-
 (defun tng--create-overlay (chunk plist)
   (let-alist chunk
     (let* ((chunk-rectangle (tng--line-rectangle .start_line .end_line))
@@ -584,13 +584,15 @@ We can use this function to `interactive' without needing to call
        cc
        `(face custom-changed
          before-string ,(propertize " " 'display '(left-fringe question-mark shadow))
-         tng-chunk-id ,(let-alist cc .id))))
+         tng-chunk-id ,(let-alist cc .id)
+         tng-chunk ,cc)))
     (dolist (gc .good)
       (tng--create-overlay
        gc
        `(face highlight
          before-string ,(propertize " " 'display '(left-fringe large-circle shadow))
-         tng-chunk-id ,(let-alist gc .id))))))
+         tng-chunk-id ,(let-alist gc .id)
+         tng-chunk-id ,gc)))))
 
 (defun tng--refresh-current-buffer-status ()
   "Set local variable tng--status."
