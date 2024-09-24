@@ -532,7 +532,7 @@ T[=]"
            (good (length .good))
            (changed (length .changed))
            (out (length .out)))
-      (propertize (format " T[%d/%d/%d/%d]" all good changed out) 'face 'next-error))))
+      (propertize (format " T[%d/%d/%d/%d]" all good changed out) 'face 'compilation-error))))
 
 (defvar-keymap tng-repeat-keymap
   :repeat t
