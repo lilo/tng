@@ -277,7 +277,10 @@ WHERE id = ?"
         (add-hook 'after-change-functions 'tng-after-change :depth :local))
     (remove-hook 'after-change-functions 'tng-after-change :local)
     (setq tng--status nil)
-    (mapc #'delete-overlay (car (overlay-lists)))))
+    (mapc #'delete-overlay ; TODO
+          (-filter
+           (lambda (o) (plist-member (overlay-properties o) 'tng-chunk))
+           (car (overlay-lists))))))
 
 (defun tng-after-change (beg end _len)
   "BEG END _LEN."
@@ -385,7 +388,7 @@ We can use this function to `interactive' without needing to call
                      ((hash-table-p collection) (gethash choice collection))
                      ((assoc-list-p collection) (alist-get choice collection def nil 'equal))
                      (t                         choice))))
-      (if (listp results) (first results) results))))
+      (if (listp results) (car results) results))))
 
 (defun tng-get-completion-chunk-alist (chunk-alists)
   "Return alist '((file:beg:end:comment . chunk-id) ...)"
@@ -488,39 +491,6 @@ RETURNING
       (changed . ,changed)
       (out . ,out))))
 
-;; https://www.howardism.org/Technical/Emacs/alt-completing-read.html
-(defun alt-completing-read (prompt collection &optional predicate require-match initial-input hist def inherit-input-method)
-  "Calls `completing-read' but returns the value from COLLECTION.
-
-Simple wrapper around the `completing-read' function that assumes
-the collection is either an alist, or a hash-table, and returns
-the _value_ of the choice, not the selected choice. For instance,
-give a variable of choices like:
-
-    (defvar favorite-hosts '((\"Glamdring\" . \"192.168.5.12\")
-                             (\"Orcrist\"   . \"192.168.5.10\")
-                             (\"Sting\"     . \"192.168.5.220\")
-                             (\"Gungnir\"   . \"192.168.5.25\")))
-
-We can use this function to `interactive' without needing to call
-`alist-get' afterwards:
-
-    (defun favorite-ssh (hostname)
-      \"Start a SSH session to a given HOSTNAME.\"
-      (interactive (list (alt-completing-read \"Host: \" favorite-hosts)))
-      (message \"Rockin' and rollin' to %s\" hostname))"
-
-  ;; Yes, Emacs really should have an `alistp' predicate to make this code more readable:
-  (cl-flet ((assoc-list-p (obj) (and (listp obj) (consp (car obj)))))
-
-    (let* ((choice
-            (completing-read prompt collection predicate require-match initial-input hist def inherit-input-method))
-           (results (cond
-                     ((hash-table-p collection) (gethash choice collection))
-                     ((assoc-list-p collection) (alist-get choice collection def nil 'equal))
-                     (t                         choice))))
-      (if (listp results) (first results) results))))
-
 (defun tng-chunks-at-point ()
   "Return list of tng chunks that include current point."
   (let* ((overlays (overlays-at (point)))
@@ -528,23 +498,7 @@ We can use this function to `interactive' without needing to call
           (-filter
            (lambda (o) (plist-member (overlay-properties o) 'tng-chunk))
            overlays)))
-    (mapcar (lambda (o) (overlay-get o 'tng-chunk)))))
-
-(defun tng-get-completion-alist (tng-overlays)
-  "Return alist '((file:beg:end:comment . chunk-id) ...)"
-  (setq completions nil) ; TODO:
-  (dolist (chunk-ov tng-overlays)
-    (let*
-        ((chunk-alist (plist-get (overlay-properties chunk-ov) 'tng-chunk))
-         (filename (alist-get 'filepath chunk-alist))
-         (comment (alist-get 'comment chunk-alist))
-         (begin-line (plist-get (overlay-properties chunk-ov) 'tng-begin-line))
-         (end-line (plist-get (overlay-properties chunk-ov) 'tng-end-line))
-         (chunk-id (plist-get (overlay-properties chunk-ov) 'tng-chunk-id))
-         (chunk-fmt
-          (format "%s:%d:%d:%s" filename begin-line end-line comment)))
-      (push `(,chunk-fmt . ,chunk-id) completions)))
-  completions)
+    (mapcar (lambda (o) (overlay-get o 'tng-chunk)) tng-overlays)))
 
 (defun tng-get-completion-chunk-alist (chunk-alists)
   "Return alist '((file:beg:end:comment . chunk-id) ...)"
@@ -554,17 +508,17 @@ We can use this function to `interactive' without needing to call
        (let*
            ((chunk-fmt
              (format "%s:%d:%d:%s" .filepath .start_line .end_line .comment)))
-         `(,chunk-fmt . ,.id))))
+         `(,chunk-fmt . ,chunk))))
    chunk-alists))
 
 (defun tng-select-chunk ()
   (when-let* ((chunks (tng-chunks-at-point))
               (first-chunk (car chunks)))
     (if (length= chunks 1)
-        (plist-get (overlay-properties first-chunk) 'tng-chunk-id)
+        first-chunk
       (alt-completing-read
        "Select: "
-       (tng-get-completion-alist chunks)))))
+       (tng-get-completion-chunk-alist chunks)))))
 
 (defun tng--create-overlay (chunk plist)
   (let-alist chunk
@@ -578,6 +532,10 @@ We can use this function to `interactive' without needing to call
 
 (defun tng--refresh-indicators ()
   "Re-create overlays."
+  (mapc #'delete-overlay ; TODO
+          (-filter
+           (lambda (o) (plist-member (overlay-properties o) 'tng-chunk))
+           (car (overlay-lists))))
   (let-alist tng--status
     (dolist (cc .changed)
       (tng--create-overlay
@@ -592,12 +550,20 @@ We can use this function to `interactive' without needing to call
        `(face highlight
          before-string ,(propertize " " 'display '(left-fringe large-circle shadow))
          tng-chunk-id ,(let-alist gc .id)
-         tng-chunk-id ,gc)))))
+         tng-chunk ,gc)))))
 
 (defun tng--refresh-current-buffer-status ()
   "Set local variable tng--status."
   (setq-local tng--status (tng--current-buffer-status)))
 
+(cl-defun tng-chunk-resize (chunk &key begin end)
+  "Update chunk, increasing or decreasing its boundaries."
+  (let-alist chunk
+    (tng--update-chunk-begin-end-lines
+     .id
+     (+ .start_line begin) (+ .end_line end)))
+  (tng--refresh-current-buffer-status)
+  (tng--refresh-indicators))
 
 (defun tng-minor-mode-lighter ()
   "Get lighter.
