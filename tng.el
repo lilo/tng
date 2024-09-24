@@ -565,6 +565,26 @@ RETURNING
   (tng--refresh-current-buffer-status)
   (tng--refresh-indicators))
 
+(defun tng-chunk-comment (chunk)
+  (interactive
+   (list (tng-select-chunk)))
+  (let-alist chunk
+    (message "Current comment: %s" .comment)
+    (sit-for 1.5) ; TODO:
+    (tng--update-chunk-comment
+     .id
+     (read-from-minibuffer "New comment: ")))
+  (tng--refresh-current-buffer-status)
+  (tng--refresh-indicators))
+
+(defun tng-chunk-delete (chunk)
+  (interactive
+   (list (tng-select-chunk)))
+  (let-alist chunk
+    (tng--delete-chunk .id))
+  (tng--refresh-current-buffer-status)
+  (tng--refresh-indicators))
+
 (defun tng-minor-mode-lighter ()
   "Get lighter.
 T[10]
