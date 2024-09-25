@@ -423,20 +423,19 @@ We can use this function to `interactive' without needing to call
          `(,chunk-fmt . ,chunk))))
    chunk-alists))
 
-(defun tng-link-chunks (src-chunk-id dst-chunk-id)
+(defun tng-link-chunks (src-chunk dst-chunk)
   "Link chunk at point with another chunk."
   (interactive
    (let* ((all-chunks (tng-project-chunks))
-          (src-chunk (alt-completing-read "Select SRC: " (tng-get-completion-chunk-alist all-chunks)))
+          (src (alt-completing-read "Select SRC: " (tng-get-completion-chunk-alist all-chunks)))
           (but-src-chunks
            (-remove
-            (lambda (c) (eq (let-alist c .id) src-chunk))
+            (lambda (c) (eq (let-alist c .id) (let-alist src .id)))
             all-chunks))
-          (dst-chunk (alt-completing-read "Select DST: " (tng-get-completion-chunk-alist but-src-chunks))))
-     (list src-chunk dst-chunk)))
-  (let* ((all-chunks (tng-project-chunks))
-         (src-chunk (-find (lambda (c) (eq (let-alist c .id) src-chunk-id)) all-chunks))
-         (dst-chunk (-find (lambda (c) (eq (let-alist c .id) dst-chunk-id)) all-chunks))
+          (dst (alt-completing-read "Select DST: " (tng-get-completion-chunk-alist but-src-chunks))))
+     (list src dst)))
+  (let* ((src-id (let-alist src-chunk .id))
+         (dst-id (let-alist dst-chunk .id))
          (srcsha1 (let-alist src-chunk .sha1hash))
          (dstsha1 (let-alist dst-chunk .sha1hash))
          (directed 1)
@@ -452,7 +451,7 @@ VALUES
  (?,?,?,?,?,?,?)
 RETURNING
  id"
-           (list src-chunk-id dst-chunk-id comment flag srcsha1 dstsha1 directed)
+           (list src-id dst-id comment flag srcsha1 dstsha1 directed)
            'full)))))
 
 (defun tng-chunk-move-up (chunk)
