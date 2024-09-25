@@ -611,10 +611,11 @@ the markers or both point to new lines."
   (let-alist chunk
     (let* ((rectangle (tng--line-rectangle .start_line .end_line))
            (start (car rectangle))
-           (end (cdr rectangle)))
+           (end (cdr rectangle))
+           (new-sha1hash (sha1 (buffer-substring-no-properties start end))))
       (tng--update-chunk-hash .id new-sha1hash)
-      (tng-delete-overlays)
-      (tng-create-overlays))))
+      (tng--refresh-current-buffer-status)
+      (tng--refresh-indicators))))
 
 (defun tng-chunk-comment (chunk)
   (interactive
