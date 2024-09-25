@@ -216,6 +216,18 @@ RETURNING
       (funcall fn begin-line end-line)))
   (deactivate-mark))
 
+(defun tng--reset-chunk-to-region (begin end)
+  (interactive "r")
+  (let* ((start-line (line-number-at-pos begin))
+         (end-line (line-number-at-pos end))
+         (chunk (alt-completing-read
+                 "Select: "
+                 (tng-get-completion-chunk-alist (let-alist tng--status .chunks)))))
+    (let-alist chunk
+      (tng--update-chunk-begin-end-lines .id start-line end-line)))
+  (tng--refresh-current-buffer-status)
+  (tng--refresh-indicators))
+
 
 (defun tng--update-chunk-begin-end-lines (chunk-id begin-line end-line)
   "Update BEGIN-LINE and END-LINE for chunk where id = CHUNK-ID"
@@ -285,6 +297,7 @@ WHERE id = ?"
 
 (defun tng-after-change (beg end _len)
   "BEG END _LEN."
+  (tng--auto-fix-moved-chunks)
   (tng--refresh-current-buffer-status)
   (tng--refresh-indicators))
 
@@ -328,11 +341,19 @@ WHERE id = ?"
     (tng--delete-chunk .id))
   (tng-list-chunks-refresh))
 
+(defun tng-list-chunks-reset-lines ()
+  "Reset chunk's lines. Set start_line=1 end_line=1"
+  (interactive)
+  (let-alist (tabulated-list-get-id)
+    (tng--update-chunk-begin-end-lines .id 1 1))
+  (tng-list-chunks-refresh))
+
 (defvar tng-list-chunks-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'tng-list-chunks-jump)
     (define-key map (kbd "C-m") #'tng-list-chunks-jump)
     (define-key map (kbd "C-k") #'tng-list-chunks-delete)
+    (define-key map (kbd "C-r") #'tng-list-chunks-reset-lines)
     map))
 
 (define-derived-mode tng-list-chunks-mode tabulated-list-mode "tng-list-chunks-mode"
@@ -389,7 +410,7 @@ We can use this function to `interactive' without needing to call
                      ((hash-table-p collection) (gethash choice collection))
                      ((assoc-list-p collection) (alist-get choice collection def nil 'equal))
                      (t                         choice))))
-      (if (listp results) (car results) results))))
+      results)))
 
 (defun tng-get-completion-chunk-alist (chunk-alists)
   "Return alist '((file:beg:end:comment . chunk-id) ...)"
@@ -399,7 +420,7 @@ We can use this function to `interactive' without needing to call
        (let*
            ((chunk-fmt
              (format "%s:%d:%d:%s" .filepath .start_line .end_line .comment)))
-         `(,chunk-fmt . ,.id))))
+         `(,chunk-fmt . ,chunk))))
    chunk-alists))
 
 (defun tng-link-chunks (src-chunk-id dst-chunk-id)
@@ -434,43 +455,43 @@ RETURNING
            (list src-chunk-id dst-chunk-id comment flag srcsha1 dstsha1 directed)
            'full)))))
 
-(defun tng-chunk-move-up (chunk-id)
+(defun tng-chunk-move-up (chunk)
   (interactive
    (list (tng-select-chunk)))
-  (when chunk-id
-    (tng-chunk-resize chunk-id :begin -1 :end -1)
+  (when chunk
+    (tng-chunk-resize chunk :begin -1 :end -1)
     (forward-line -1)))
 
-(defun tng-chunk-move-down (chunk-id)
+(defun tng-chunk-move-down (chunk)
   (interactive
    (list (tng-select-chunk)))
-  (when chunk-id
-    (tng-chunk-resize chunk-id :begin +1 :end +1)
+  (when chunk
+    (tng-chunk-resize chunk :begin +1 :end +1)
     (forward-line +1)))
 
-(defun tng-chunk-expand-up (chunk-id)
+(defun tng-chunk-expand-up (chunk)
   (interactive
    (list (tng-select-chunk)))
-  (when chunk-id
-    (tng-chunk-resize chunk-id :begin -1 :end 0)))
+  (when chunk
+    (tng-chunk-resize chunk :begin -1 :end 0)))
 
-(defun tng-chunk-expand-down (chunk-id)
+(defun tng-chunk-expand-down (chunk)
   (interactive
    (list (tng-select-chunk)))
-  (when chunk-id
-    (tng-chunk-resize chunk-id :begin 0 :end +1)))
+  (when chunk
+    (tng-chunk-resize chunk :begin 0 :end +1)))
 
-(defun tng-chunk-shrink-up (chunk-id)
+(defun tng-chunk-shrink-up (chunk)
   (interactive
    (list (tng-select-chunk)))
-  (when chunk-id
-    (tng-chunk-resize chunk-id :begin +1 :end 0)))
+  (when chunk
+    (tng-chunk-resize chunk :begin +1 :end 0)))
 
-(defun tng-chunk-shrink-down (chunk-id)
+(defun tng-chunk-shrink-down (chunk)
   (interactive
    (list (tng-select-chunk)))
-  (when chunk-id
-    (tng-chunk-resize chunk-id :begin 0 :end -1)))
+  (when chunk
+    (tng-chunk-resize chunk :begin 0 :end -1)))
 
 (defun tng--current-buffer-status ()
   (let* ((chunks (tng--file-chunks (tng--current-filepath)))
@@ -488,14 +509,38 @@ RETURNING
                   (progn
                     (let* ((chunk-boc-marker (set-marker (make-marker) chunk-boc))
                            (chunk-eoc-marker (set-marker (make-marker) chunk-eoc)))
-                      (add-to-list 'c `(boc-marker ,chunk-boc-marker))
-                      (add-to-list 'c `(eoc-marker ,chunk-eoc-marker)))
+                      (add-to-list 'c `(boc-marker . ,chunk-boc-marker) :append)
+                      (add-to-list 'c `(eoc-marker . ,chunk-eoc-marker) :append))
                     (push c good))
                 (push c changed)))))))
     `((chunks . ,chunks)
       (good . ,good)
       (changed . ,changed)
       (out . ,out))))
+
+(defun tng--auto-fix-moved-chunks ()
+  "Update start_line and end_line for shifted chunk.
+
+A chunk is shifted if it's sha1hash remains unchanged but one of
+the markers or both point to new lines."
+  (let-alist tng--status
+    (dolist (gc .good)
+      (let-alist gc
+        (let* ((chunk-rectangle (tng--line-rectangle .start_line .end_line))
+               (chunk-boc (car chunk-rectangle))
+               (chunk-eoc (cdr chunk-rectangle))
+               (chunk-marker-start-line (line-number-at-pos .boc-marker))
+               (chunk-marker-end-line (line-number-at-pos .eoc-marker))
+               (sha1chunk (sha1 (buffer-substring-no-properties chunk-boc chunk-eoc)))
+               (sha1markers (sha1 (buffer-substring-no-properties .boc-marker .eoc-marker))))
+          (when (and
+                 (or (not (= chunk-marker-start-line .start_line))
+                     (not (= chunk-marker-end-line .end_line)))
+                 (string= .sha1hash sha1markers))
+            (tng--update-chunk-begin-end-lines
+             .id
+             chunk-marker-start-line
+             chunk-marker-end-line)))))))
 
 (defun tng-chunks-at-point ()
   "Return list of tng chunks that include current point."
@@ -505,17 +550,6 @@ RETURNING
            (lambda (o) (plist-member (overlay-properties o) 'tng-chunk))
            overlays)))
     (mapcar (lambda (o) (overlay-get o 'tng-chunk)) tng-overlays)))
-
-(defun tng-get-completion-chunk-alist (chunk-alists)
-  "Return alist '((file:beg:end:comment . chunk-id) ...)"
-  (mapcar
-   (lambda (chunk)
-     (let-alist chunk
-       (let*
-           ((chunk-fmt
-             (format "%s:%d:%d:%s" .filepath .start_line .end_line .comment)))
-         `(,chunk-fmt . ,chunk))))
-   chunk-alists))
 
 (defun tng-select-chunk ()
   (when-let* ((chunks (tng-chunks-at-point))
@@ -578,7 +612,7 @@ RETURNING
     (let* ((rectangle (tng--line-rectangle .start_line .end_line))
            (start (car rectangle))
            (end (cdr rectangle)))
-      (tng--update-chunk-hash chunk-id new-sha1hash)
+      (tng--update-chunk-hash .id new-sha1hash)
       (tng-delete-overlays)
       (tng-create-overlays))))
 
@@ -633,6 +667,7 @@ T[=]"
   "l" #'tng-list-chunks
   "h" #'tng-chunk-rehash
   "c" #'tng-chunk-comment
+  "R" #'tng--reset-chunk-to-region
   "C-k" #'tng-chunk-delete
   "C-c" #'tng-link-chunks)
 
