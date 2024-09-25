@@ -154,7 +154,8 @@ Takes START and END as arguments.")
 
 (defun tng--refresh-status-after-chunk-add (&rest _)
   "Refresh"
-  (tng--refresh-current-buffer-status))
+  (tng--refresh-current-buffer-status)
+  (tng--refresh-indicators))
 
 (add-to-list 'tng--post-add-region-functions #'tng-pulse-region)
 (add-to-list 'tng--post-add-region-functions #'tng--refresh-status-after-chunk-add)
@@ -564,6 +565,17 @@ RETURNING
      (+ .start_line begin) (+ .end_line end)))
   (tng--refresh-current-buffer-status)
   (tng--refresh-indicators))
+
+(defun tng-chunk-rehash (chunk)
+  (interactive
+   (list (tng-select-chunk)))
+  (let-alist chunk
+    (let* ((rectangle (tng--line-rectangle .start_line .end_line))
+           (start (car rectangle))
+           (end (cdr rectangle)))
+      (tng--update-chunk-hash chunk-id new-sha1hash)
+      (tng-delete-overlays)
+      (tng-create-overlays))))
 
 (defun tng-chunk-comment (chunk)
   (interactive
