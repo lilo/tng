@@ -531,7 +531,6 @@ the markers or both point to new lines."
                (chunk-eoc (cdr chunk-rectangle))
                (chunk-marker-start-line (line-number-at-pos .boc-marker))
                (chunk-marker-end-line (1- (line-number-at-pos .eoc-marker)))
-               (sha1chunk (sha1 (buffer-substring-no-properties chunk-boc chunk-eoc)))
                (sha1markers (sha1 (buffer-substring-no-properties .boc-marker .eoc-marker))))
           (when (and
                  (or (not (= chunk-marker-start-line .start_line))
