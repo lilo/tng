@@ -530,7 +530,7 @@ the markers or both point to new lines."
                (chunk-boc (car chunk-rectangle))
                (chunk-eoc (cdr chunk-rectangle))
                (chunk-marker-start-line (line-number-at-pos .boc-marker))
-               (chunk-marker-end-line (line-number-at-pos .eoc-marker))
+               (chunk-marker-end-line (1- (line-number-at-pos .eoc-marker)))
                (sha1chunk (sha1 (buffer-substring-no-properties chunk-boc chunk-eoc)))
                (sha1markers (sha1 (buffer-substring-no-properties .boc-marker .eoc-marker))))
           (when (and
