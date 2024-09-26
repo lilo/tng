@@ -287,8 +287,8 @@ WHERE id = ?"
       (progn
         (tng--refresh-current-buffer-status)
         (tng--refresh-indicators)
-        (add-hook 'after-change-functions 'tng-after-change :depth :local))
-    (remove-hook 'after-change-functions 'tng-after-change :local)
+        (add-hook 'after-change-functions #'tng-after-change :depth :local))
+    (remove-hook 'after-change-functions #'tng-after-change :local)
     (setq tng--status nil)
     (mapc #'delete-overlay ; TODO
           (-filter
