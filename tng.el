@@ -348,12 +348,20 @@ WHERE id = ?"
     (tng--update-chunk-begin-end-lines .id 1 1))
   (tng-list-chunks-refresh))
 
+(defun tng-list-chunks-reset-lines-read-lines (new-start new-end)
+  "Reset chunk's lines. Set start_line=1 end_line=1"
+  (interactive "nNew start line: \nnNew end line: ")
+  (let-alist (tabulated-list-get-id)
+    (tng--update-chunk-begin-end-lines .id new-start new-end))
+  (tng-list-chunks-refresh))
+
 (defvar tng-list-chunks-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'tng-list-chunks-jump)
     (define-key map (kbd "C-m") #'tng-list-chunks-jump)
     (define-key map (kbd "C-k") #'tng-list-chunks-delete)
     (define-key map (kbd "C-r") #'tng-list-chunks-reset-lines)
+    (define-key map (kbd "r") #'tng-list-chunks-reset-lines-read-lines)
     map))
 
 (define-derived-mode tng-list-chunks-mode tabulated-list-mode "tng-list-chunks-mode"
