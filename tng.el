@@ -384,6 +384,7 @@ WHERE id = ?"
   (interactive)
   (let ((buf (get-buffer-create "* TNG chunks*")))
     (switch-to-buffer buf)
+    (setq-local tng-project-dir tng-project-dir)
     (tng-list-chunks-mode)
     (tng-list-chunks-refresh)))
 
@@ -600,6 +601,36 @@ the markers or both point to new lines."
          tng-chunk ,gc)))))
 
 (defun tng--refresh-current-buffer-status ()
+  "Set local variable tng--status."
+  (setq-local tng--status (tng--current-buffer-status)))
+
+(defun tng--buffer-status (buffer)
+  (let* ((chunks (tng--file-chunks (tng--current-filepath)))
+         changed out good)
+    (dolist (c chunks)
+      (let-alist c
+        (let* ((chunk-rectangle (tng--line-rectangle .start_line .end_line))
+               (chunk-boc (car chunk-rectangle))
+               (chunk-eoc (cdr chunk-rectangle))
+               (eob (point-max)))
+          (if (> chunk-eoc eob)
+              (push c out)
+            (let ((sha1be (sha1 (buffer-substring-no-properties chunk-boc chunk-eoc))))
+              (if (string-equal sha1be .sha1hash)
+                  (progn
+                    (let* ((chunk-boc-marker (set-marker (make-marker) chunk-boc))
+                           (chunk-eoc-marker (set-marker (make-marker) chunk-eoc)))
+                      (set-marker-insertion-type chunk-boc-marker :advances)
+                      (add-to-list 'c `(boc-marker . ,chunk-boc-marker) :append)
+                      (add-to-list 'c `(eoc-marker . ,chunk-eoc-marker) :append))
+                    (push c good))
+                (push c changed)))))))
+    `((chunks . ,chunks)
+      (good . ,good)
+      (changed . ,changed)
+      (out . ,out))))
+
+(defun tng--refresh-buffer-status (buffer)
   "Set local variable tng--status."
   (setq-local tng--status (tng--current-buffer-status)))
 
