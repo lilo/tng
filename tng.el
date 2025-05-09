@@ -132,6 +132,30 @@ Argument END-LINE to that."
     (mapcar
      (lambda (chunk) (cl-pairlis header chunk))
      chunks)))
+(defun tng--chunk-from-org-item (point)
+  (when-let
+      ((id (org-entry-get (point) "TNG_ID"))
+       (filepath (org-entry-get (point) "TNG_FILEPATH"))
+       (start_line (org-entry-get (point) "TNG_START_LINE"))
+       (end_line (org-entry-get (point) "TNG_END_LINE"))
+       (comment (org-entry-get (point) "TNG_COMMENT"))
+       (sha1hash (org-entry-get (point) "TNG_SHA1HASH")))
+    `((id . ,id)
+      (filepath . ,filepath)
+      (start_line . ,start_line)
+      (end_line . ,end_line)
+      (comment . ,comment)
+      (sha1hash . ,sha1hash))))
+
+(defun tng-org-project-chunks ()
+    (let* ((entries
+            (save-excursion
+              (with-current-buffer (find-file-noselect "tango.org")
+                (org-map-entries
+                 (lambda () (tng--chunk-from-org-item (point)))
+                 "LEVEL=2"
+                 'file)))))
+      entries))
 
 (defun tng-project-chunks ()
   "Return alists of all chunks (in current project)."
