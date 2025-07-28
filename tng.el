@@ -25,15 +25,16 @@
 
 (require 'cl-lib)
 (require 'dash)
+(require 'org-ml)
 
 (defvar-local tng--status nil
   "Current buffer status as alist.")
 
-(defvar-local tng-project-dir (project-root (project-current))
+(defvar-local tng-project-dir nil ;(project-root (project-current))
   "Root of current project.")
 
 (defvar-local tng-db-filename
-    (file-name-concat tng-project-dir "tango.sqlite3")
+    (file-name-concat tng-project-dir "tango.org")
   "Path to the tng database.")
 
 (defgroup tng nil
@@ -56,29 +57,6 @@
            (buffer-file-name)
            tng-project-dir))
 
-(defun tng-init-db (&optional dir)
-  "Create tng DB in the project root DIR."
-  (progn
-    (sqlite-execute
-     (sqlite-open tng-db-filename)
-     "CREATE TABLE \"chunk\" (\
-	\"id\"	INTEGER,\
-	\"filepath\"	TEXT NOT NULL,\
-	\"sha1hash\"	TEXT NOT NULL,\
-	\"start_line\"	INTEGER NOT NULL,\
-	\"end_line\"	INTEGER,\
-	\"comment\"	TEXT,
-	PRIMARY KEY(\"id\" AUTOINCREMENT));")
-    (sqlite-execute
-     (sqlite-open tng-db-filename)
-     "CREATE TABLE \"dep\" (
-	\"id\"	INTEGER,
-	\"src\"	INTEGER NOT NULL,
-	\"dst\"	INTEGER NOT NULL,
-	\"comment\"	TEXT,
-	FOREIGN KEY(\"src\") REFERENCES \"chunk\"(\"id\"),
-	PRIMARY KEY(\"id\" AUTOINCREMENT),
-	FOREIGN KEY(\"dst\") REFERENCES \"chunk\"(\"id\"));")))
 
 
 (defvar tng--post-jump-region-functions nil
@@ -131,7 +109,14 @@ Argument END-LINE to that."
          (chunks (cdr records)))
     (mapcar
      (lambda (chunk) (cl-pairlis header chunk))
-     chunks)))
+     chunks)
+    `((id . ,id)
+      (filepath . ,filepath)
+      (start_line . ,start_line)
+      (end_line . ,end_line)
+      (comment . ,comment)
+      (sha1hash . ,sha1hash))))
+
 (defun tng--chunk-from-org-item (point)
   (when-let
       ((id (org-entry-get (point) "TNG_ID"))
@@ -153,7 +138,7 @@ Argument END-LINE to that."
               (with-current-buffer (find-file-noselect "tango.org")
                 (org-map-entries
                  (lambda () (tng--chunk-from-org-item (point)))
-                 "LEVEL=2"
+                 "LEVEL=2" ; TODO: heading=="chunks" and level==2
                  'file)))))
       entries))
 
