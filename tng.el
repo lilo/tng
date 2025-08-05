@@ -99,23 +99,11 @@ Argument END-LINE to that."
 
 (defun tng--file-chunks (filepath)
   "Return alists of chunks in FILEPATH (relative to the project's root)."
-  (let* ((db (sqlite-open tng-db-filename))
-         (records (sqlite-select
-                  db
-                  "select id,filepath,start_line,end_line,comment,sha1hash from chunk where filepath=?"
-                  (list filepath)
-                  'full))
-         (header (mapcar #'intern (car records)))
-         (chunks (cdr records)))
-    (mapcar
-     (lambda (chunk) (cl-pairlis header chunk))
-     chunks)
-    `((id . ,id)
-      (filepath . ,filepath)
-      (start_line . ,start_line)
-      (end_line . ,end_line)
-      (comment . ,comment)
-      (sha1hash . ,sha1hash))))
+  (let* ((all-chunks (tng-org-project-chunks)))
+    (-filter
+     (lambda (chunk) (let-alist chunk (string-equal .filepath filepath)))
+     all-chunks)))
+
 
 (defun tng--chunk-from-org-item (point)
   (when-let
