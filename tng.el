@@ -553,7 +553,7 @@ the markers or both point to new lines."
     (dolist (cc .changed)
       (tng--create-overlay
        cc
-       `(face custom-changed
+       `(face isearch-fail
          before-string ,(propertize " " 'display '(left-fringe question-mark shadow))
          tng-chunk-id ,(let-alist cc .id)
          tng-chunk ,cc)))
