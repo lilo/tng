@@ -208,17 +208,10 @@ Argument END to here."
 
 (defun tng--update-chunk-begin-end-lines (chunk-id begin-line end-line)
   "Update BEGIN-LINE and END-LINE for chunk where id = CHUNK-ID"
-  (sqlite-select
-   (sqlite-open tng-db-filename)
-   "
-UPDATE chunk
-SET start_line = ?,
-    end_line = ?
-WHERE id = ?
-RETURNING
- id"
-   (list begin-line end-line chunk-id)
-   (not 'return-value)))
+  (progn
+    (tng--update-chunk-property chunk-id "tng_start_line" (number-to-string begin-line))
+    (tng--update-chunk-property chunk-id "tng_end_line" (number-to-string end-line))))
+
 
 (defun tng--update-chunk-property (chunk-id property value)
   "Update PROPERTY for chunk where id = CHUNK-ID"
@@ -239,16 +232,7 @@ RETURNING
 
 (defun tng--update-chunk-comment (chunk-id comment)
   "Update COMMENT for chunk where id = CHUNK-ID"
-  (sqlite-select
-   (sqlite-open tng-db-filename)
-   "
-UPDATE chunk
-SET comment = ?
-WHERE id = ?
-RETURNING
- id"
-   (list comment chunk-id)
-   nil))
+  (tng--update-chunk-property chunk-id "tng_comment" comment))
 
 (defun tng--delete-chunk (chunk-id)
   "Delete chunk where id = CHUNK-ID."
