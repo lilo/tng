@@ -269,7 +269,7 @@ WHERE id = ?"
 
 (defun tng-list-chunks-refresh ()
   "Refresh list of chunks."
-  (let* ((chunks (tng-project-chunks)))
+  (let* ((chunks (tng-org-project-chunks)))
     (cl-flet
         ((tabulate-chunk (chunk)
            (let-alist chunk
@@ -277,7 +277,7 @@ WHERE id = ?"
               chunk
               (vector
                (list
-                (number-to-string .id)
+                .id
                 'face 'default
                 'action (lambda (_button) (tng-list-chunks-jump)))
                (list .filepath) (list (format "%s:%s" .start_line .end_line)) (list .comment))))))
@@ -400,7 +400,7 @@ We can use this function to `interactive' without needing to call
 (defun tng-link-chunks (src-chunk dst-chunk)
   "Link chunk at point with another chunk."
   (interactive
-   (let* ((all-chunks (tng-project-chunks))
+   (let* ((all-chunks (tng-org-project-chunks))
           (src (alt-completing-read "Select SRC: " (tng-get-completion-chunk-alist all-chunks)))
           (but-src-chunks
            (-remove
