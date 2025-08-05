@@ -189,9 +189,8 @@ Argument END to here."
     (let ((temporary-file-directory
            (file-name-concat tng-project-dir ".tng")))
       (make-temp-file "tng-" (null :dir-flag) ".org" element))
-    ;; (dolist (fn tng--post-add-region-functions)
-    ;;   (funcall fn begin-line end-line))
-    )
+    (dolist (fn tng--post-add-region-functions)
+      (funcall fn begin-line end-line)))
   (deactivate-mark))
 
 (defun tng--reset-chunk-to-region (begin end)
