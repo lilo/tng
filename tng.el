@@ -412,11 +412,13 @@ We can use this function to `interactive' without needing to call
          (dst-id (let-alist dst-chunk .id))
          (srcsha1 (let-alist src-chunk .sha1hash))
          (dstsha1 (let-alist dst-chunk .sha1hash))
+         (src-comment (let-alist src-chunk .comment))
+         (dst-comment (let-alist dst-chunk .comment))
          (directed 1)
          (flag 1)
          (comment (read-from-minibuffer "Comment for link: "))
          (element
-          (format "* %s\n:PROPERTIES:\n:tng_link_src_id: %s\n:tng_link_dst_id: %s\n:tng_link_src_sha1: %s\n:tng_link_dst_sha1: %s\n:tng_link_directed: %s\n:tng_link_flag: %s\n:tng_link_comment: %s\n:END:\n" comment src-id dst-id srcsha1 dstsha1 directed flag comment)))
+          (format "* %s\n:PROPERTIES:\n:tng_link_src_id: %s\n:tng_link_dst_id: %s\n:tng_link_src_sha1: %s\n:tng_link_dst_sha1: %s\n:tng_link_directed: %s\n:tng_link_flag: %s\n:tng_link_comment: %s\n:tng_link_src_comment: %s\n:tng_link_dst_comment: %s\n:END:\n" comment src-id dst-id srcsha1 dstsha1 directed flag comment src-comment dst-comment)))
     (let ((temporary-file-directory
            (file-name-concat tng-project-dir ".tng")))
       (make-temp-file "link-" (null :dir-flag) ".org" element))))
