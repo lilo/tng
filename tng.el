@@ -188,7 +188,7 @@ Argument END to here."
          (element (format "* %s\n:PROPERTIES:\n:tng_id: %s\n:tng_filepath: %s\n:tng_start_line: %s\n:tng_end_line: %s\n:tng_comment: %s\n:tng_sha1hash: %s\n:END:\n" comment chunk-id filepath begin-line end-line comment sha1-hash))) ;; TODO: slugify title
     (let ((temporary-file-directory
            (file-name-concat tng-project-dir ".tng")))
-      (make-temp-file "tng-" (null :dir-flag) ".org" element))
+      (make-temp-file "chunk-" (null :dir-flag) ".org" element))
     (dolist (fn tng--post-add-region-functions)
       (funcall fn begin-line end-line)))
   (deactivate-mark))
