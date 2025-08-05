@@ -415,18 +415,11 @@ We can use this function to `interactive' without needing to call
          (directed 1)
          (flag 1)
          (comment (read-from-minibuffer "Comment for link: "))
-         (last-added-link
-          (sqlite-select
-           (sqlite-open tng-db-filename)
-           "
-INSERT INTO
- dep(src,dst,comment,flag,srcsha1,dstsha1,directed)
-VALUES
- (?,?,?,?,?,?,?)
-RETURNING
- id"
-           (list src-id dst-id comment flag srcsha1 dstsha1 directed)
-           'full)))))
+         (element
+          (format "* %s\n:PROPERTIES:\n:tng_link_src_id: %s\n:tng_link_dst_id: %s\n:tng_link_src_sha1: %s\n:tng_link_dst_sha1: %s\n:tng_link_directed: %s\n:tng_link_flag: %s\n:tng_link_comment: %s\n:END:\n" comment src-id dst-id srcsha1 dstsha1 directed flag comment)))
+    (let ((temporary-file-directory
+           (file-name-concat tng-project-dir ".tng")))
+      (make-temp-file "link-" (null :dir-flag) ".org" element))))
 
 (defun tng-chunk-move-up (chunk)
   (interactive
