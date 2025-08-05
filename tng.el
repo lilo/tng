@@ -109,8 +109,8 @@ Argument END-LINE to that."
     (when-let
         ((id (org-entry-get pt "TNG_ID"))
          (filepath (org-entry-get pt "TNG_FILEPATH"))
-         (start_line (org-entry-get pt "TNG_START_LINE"))
-         (end_line (org-entry-get pt "TNG_END_LINE"))
+         (start_line (string-to-number (org-entry-get pt "TNG_START_LINE")))
+         (end_line (string-to-number (org-entry-get pt "TNG_END_LINE")))
          (comment (org-entry-get pt "TNG_COMMENT"))
          (sha1hash (org-entry-get pt "TNG_SHA1HASH"))
          (chunkfilepath (file-relative-name (buffer-file-name) tng-project-dir)))
