@@ -220,18 +220,22 @@ RETURNING
    (list begin-line end-line chunk-id)
    (not 'return-value)))
 
+(defun tng--update-chunk-property (chunk-id property value)
+  "Update PROPERTY for chunk where id = CHUNK-ID"
+  (let* ((chunks (tng-current-chunks))
+         (chunk (-first
+                 (lambda (chunk)
+                   (let-alist chunk
+                     (string-equal .id chunk-id)))
+                 chunks))
+         (chunkfile (let-alist chunk .chunkfilepath)))
+    (with-current-buffer (find-file-noselect chunkfile)
+      (org-entry-put (point) property value)
+      (save-buffer))))
+
 (defun tng--update-chunk-hash (chunk-id sha1hash)
   "Update SHA1HASH for chunk where id = CHUNK-ID"
-  (sqlite-select
-   (sqlite-open tng-db-filename)
-   "
-UPDATE chunk
-SET sha1hash = ?
-WHERE id = ?
-RETURNING
- id"
-   (list sha1hash chunk-id)
-   nil))
+  (tng--update-chunk-property chunk-id "tng_sha1hash" sha1hash))
 
 (defun tng--update-chunk-comment (chunk-id comment)
   "Update COMMENT for chunk where id = CHUNK-ID"
