@@ -30,7 +30,7 @@
 (defvar-local tng--status nil
   "Current buffer status as alist.")
 
-(defvar-local tng-project-dir nil ;(project-root (project-current))
+(defvar-local tng-project-dir (project-root (project-current))
   "Root of current project.")
 
 (defvar-local tng-db-filename
@@ -131,6 +131,27 @@ Argument END-LINE to that."
       (end_line . ,end_line)
       (comment . ,comment)
       (sha1hash . ,sha1hash))))
+
+;; (org-ql-query
+;;   :select #'tng--chunk-from-org-item-at-point
+;;   :from '("c:/Users/power/dev/tng/.tng/tango.org" "c:/Users/power/dev/tng/.tng/tango2.org")
+;;   :where '(property "tng_id"))
+
+(defun tng--chunk-from-org-item-at-point ()
+  (let ((pt (point)))
+    (when-let
+        ((id (org-entry-get pt "TNG_ID"))
+         (filepath (org-entry-get pt "TNG_FILEPATH"))
+         (start_line (org-entry-get pt "TNG_START_LINE"))
+         (end_line (org-entry-get pt "TNG_END_LINE"))
+         (comment (org-entry-get pt "TNG_COMMENT"))
+         (sha1hash (org-entry-get pt "TNG_SHA1HASH")))
+      `((id . ,id)
+        (filepath . ,filepath)
+        (start_line . ,start_line)
+        (end_line . ,end_line)
+        (comment . ,comment)
+        (sha1hash . ,sha1hash)))))
 
 (defun tng-org-project-chunks ()
     (let* ((entries
