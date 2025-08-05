@@ -104,23 +104,6 @@ Argument END-LINE to that."
      (lambda (chunk) (let-alist chunk (string-equal .filepath filepath)))
      all-chunks)))
 
-
-(defun tng--chunk-from-org-item (point)
-  (when-let
-      ((id (org-entry-get (point) "TNG_ID"))
-       (filepath (org-entry-get (point) "TNG_FILEPATH"))
-       (start_line (org-entry-get (point) "TNG_START_LINE"))
-       (end_line (org-entry-get (point) "TNG_END_LINE"))
-       (comment (org-entry-get (point) "TNG_COMMENT"))
-       (sha1hash (org-entry-get (point) "TNG_SHA1HASH")))
-    `((id . ,id)
-      (filepath . ,filepath)
-      (start_line . ,start_line)
-      (end_line . ,end_line)
-      (comment . ,comment)
-      (sha1hash . ,sha1hash))))
-
-
 (defun tng--chunk-from-org-item-at-point ()
   (let ((pt (point)))
     (when-let
@@ -129,13 +112,15 @@ Argument END-LINE to that."
          (start_line (org-entry-get pt "TNG_START_LINE"))
          (end_line (org-entry-get pt "TNG_END_LINE"))
          (comment (org-entry-get pt "TNG_COMMENT"))
-         (sha1hash (org-entry-get pt "TNG_SHA1HASH")))
+         (sha1hash (org-entry-get pt "TNG_SHA1HASH"))
+         (chunkfilepath (file-relative-name (buffer-file-name) tng-project-dir)))
       `((id . ,id)
         (filepath . ,filepath)
         (start_line . ,start_line)
         (end_line . ,end_line)
         (comment . ,comment)
-        (sha1hash . ,sha1hash)))))
+        (sha1hash . ,sha1hash)
+        (chunkfilepath . ,chunkfilepath)))))
 
 (defun tng-org-project-chunks ()
   (org-ql-query
@@ -145,20 +130,6 @@ Argument END-LINE to that."
            (file-name-concat ".tng" file))
          (directory-files (file-name-concat tng-project-dir ".tng") (null :full) "org$"))
   :where '(property "tng_id")))
-
-(defun tng-project-chunks ()
-  "Return alists of all chunks (in current project)."
-  (let* ((db (sqlite-open tng-db-filename))
-         (records (sqlite-select
-                  db
-                  "select id,filepath,start_line,end_line,comment,sha1hash from chunk"
-                  (not :values)
-                  'full))
-         (header (mapcar #'intern (car records)))
-         (chunks (cdr records)))
-    (mapcar
-     (lambda (chunk) (cl-pairlis header chunk))
-     chunks)))
 
 
 (defvar tng--post-add-region-functions nil
@@ -213,20 +184,14 @@ Argument END to here."
          (comment
           (if (not arg)
               (read-from-minibuffer "Comment for this chunk: ")))
-         (last-added-chunk
-          (sqlite-select
-           (sqlite-open tng-db-filename)
-           "
-INSERT INTO
- chunk(filepath,sha1hash,comment,start_line,end_line)
-VALUES
- (?,?,?,?,?)
-RETURNING
- id"
-           (list filepath sha1-hash comment begin-line end-line)
-           'full)))
-    (dolist (fn tng--post-add-region-functions)
-      (funcall fn begin-line end-line)))
+         (chunk-id (org-id-new)) ;; TODO
+         (element (format "* %s\n:PROPERTIES:\n:tng_id: %s\n:tng_filepath: %s\n:tng_start_line: %s\n:tng_end_line: %s\n:tng_comment: %s\n:tng_sha1hash: %s\n:END:\n" comment chunk-id filepath begin-line end-line comment sha1-hash))) ;; TODO: slugify title
+    (let ((temporary-file-directory
+           (file-name-concat tng-project-dir ".tng")))
+      (make-temp-file "tng-" (null :dir-flag) ".org" element))
+    ;; (dolist (fn tng--post-add-region-functions)
+    ;;   (funcall fn begin-line end-line))
+    )
   (deactivate-mark))
 
 (defun tng--reset-chunk-to-region (begin end)
