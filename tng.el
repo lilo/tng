@@ -153,8 +153,7 @@ Argument END-LINE to that."
   (org-ql-query
   :select #'tng--chunk-from-org-item-at-point
   :from (mapcar
-         (lambda
-           (file)
+         (lambda (file)
            (file-name-concat ".tng" file))
          (directory-files (file-name-concat tng-project-dir ".tng") (null :full) "org$"))
   :where '(property "tng_id")))
