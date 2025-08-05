@@ -132,10 +132,6 @@ Argument END-LINE to that."
       (comment . ,comment)
       (sha1hash . ,sha1hash))))
 
-;; (org-ql-query
-;;   :select #'tng--chunk-from-org-item-at-point
-;;   :from '("c:/Users/power/dev/tng/.tng/tango.org" "c:/Users/power/dev/tng/.tng/tango2.org")
-;;   :where '(property "tng_id"))
 
 (defun tng--chunk-from-org-item-at-point ()
   (let ((pt (point)))
@@ -154,14 +150,14 @@ Argument END-LINE to that."
         (sha1hash . ,sha1hash)))))
 
 (defun tng-org-project-chunks ()
-    (let* ((entries
-            (save-excursion
-              (with-current-buffer (find-file-noselect "tango.org")
-                (org-map-entries
-                 (lambda () (tng--chunk-from-org-item (point)))
-                 "LEVEL=2" ; TODO: heading=="chunks" and level==2
-                 'file)))))
-      entries))
+  (org-ql-query
+  :select #'tng--chunk-from-org-item-at-point
+  :from (mapcar
+         (lambda
+           (file)
+           (file-name-concat ".tng" file))
+         (directory-files (file-name-concat tng-project-dir ".tng") (null :full) "org$"))
+  :where '(property "tng_id")))
 
 (defun tng-project-chunks ()
   "Return alists of all chunks (in current project)."
