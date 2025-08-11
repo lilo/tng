@@ -124,13 +124,16 @@ Argument END-LINE to that."
         (chunkfilepath . ,chunkfilepath)))))
 
 (defun tng-org-project-chunks ()
-  (org-ql-query
-  :select #'tng--chunk-from-org-item-at-point
-  :from (mapcar
+  (when-let
+      ((tng-files
+        (mapcar
          (lambda (file)
            (file-name-concat ".tng" file))
-         (directory-files (file-name-concat tng-project-dir ".tng") (null :full) "org$"))
-  :where '(property "tng_id")))
+         (directory-files (file-name-concat tng-project-dir ".tng") (null :full) "org$" :nosort))))
+    (org-ql-query
+      :select #'tng--chunk-from-org-item-at-point
+      :from tng-files
+      :where '(property "tng_id"))))
 
 
 (defvar tng--post-add-region-functions nil
