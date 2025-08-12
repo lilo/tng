@@ -1,0 +1,9 @@
+* first line
+:PROPERTIES:
+:tng_id: f8670bef-860d-408b-acb1-cd3a3e6bfd0b
+:tng_filepath: tng.el
+:tng_start_line: -3
+:tng_end_line: 1
+:tng_comment: first line
+:tng_sha1hash: 5cd84d16a1f76a11337c7ae985772970a78616f2
+:END:

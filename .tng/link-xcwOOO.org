@@ -1,0 +1,12 @@
+* first -> reqs
+:PROPERTIES:
+:tng_link_src_id: f8670bef-860d-408b-acb1-cd3a3e6bfd0b
+:tng_link_dst_id: 3c411909-1e49-41c4-9471-5cc3d1414837
+:tng_link_src_sha1: 5cd84d16a1f76a11337c7ae985772970a78616f2
+:tng_link_dst_sha1: 5585ab3f955cf653825209bbeb9b4b9486159c54
+:tng_link_directed: 1
+:tng_link_flag: 1
+:tng_link_comment: first -> reqs
+:tng_link_src_comment: first line
+:tng_link_dst_comment: requirements
+:END:
