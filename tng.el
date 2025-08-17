@@ -153,7 +153,11 @@ Argument END-LINE to that."
         (mapcar
          (lambda (file)
            (file-name-concat ".tng" file))
-         (directory-files (file-name-concat tng-project-dir ".tng") (null :full) "org$" :nosort))))
+         (directory-files
+          (file-name-concat tng-project-dir ".tng")
+          (null :full)
+          "chunk.*org$"
+          :nosort))))
     (org-ql-query
       :select #'tng--chunk-from-org-item-at-point
       :from tng-files
@@ -506,26 +510,34 @@ We can use this function to `interactive' without needing to call
     (tng-chunk-resize chunk :begin 0 :end -1)))
 
 (defun tng--current-buffer-status ()
+  "Return status as an alist:
+
+    `((chunks . ,chunks)    ; all chunks
+      (good . ,good)        ; OK chunks
+      (changed . ,changed)  ; sha1sum mismatch
+      (out . ,out))))       ; out of buffer's body
+TODO: chunks that have their upstreams changed
+"
   (let* ((chunks (tng--file-chunks (tng--current-filepath)))
          changed out good)
-    (dolist (c chunks)
-      (let-alist c
+    (dolist (chunk chunks)
+      (let-alist chunk
         (let* ((chunk-rectangle (tng--line-rectangle .start_line .end_line))
                (chunk-boc (car chunk-rectangle))
                (chunk-eoc (cdr chunk-rectangle))
                (eob (point-max)))
           (if (> chunk-eoc eob)
-              (push c out)
+              (push chunk out)
             (let ((sha1be (sha1 (buffer-substring-no-properties chunk-boc chunk-eoc))))
               (if (string-equal sha1be .sha1hash)
                   (progn
                     (let* ((chunk-boc-marker (set-marker (make-marker) chunk-boc))
                            (chunk-eoc-marker (set-marker (make-marker) chunk-eoc)))
                       (set-marker-insertion-type chunk-boc-marker :advances)
-                      (add-to-list 'c `(boc-marker . ,chunk-boc-marker) :append)
-                      (add-to-list 'c `(eoc-marker . ,chunk-eoc-marker) :append))
-                    (push c good))
-                (push c changed)))))))
+                      (add-to-list 'chunk `(boc-marker . ,chunk-boc-marker) :append)
+                      (add-to-list 'chunk `(eoc-marker . ,chunk-eoc-marker) :append))
+                    (push chunk good))
+                (push chunk changed)))))))
     `((chunks . ,chunks)
       (good . ,good)
       (changed . ,changed)
