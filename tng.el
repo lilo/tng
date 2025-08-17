@@ -509,6 +509,24 @@ We can use this function to `interactive' without needing to call
   (when chunk
     (tng-chunk-resize chunk :begin 0 :end -1)))
 
+(defun tng--downstream-links (chunk)
+  "Return a list of downstream links for CHUNK."
+  (let* ((links (tng-org-project-links))
+         (chunk-id (let-alist chunk .id)))
+    (-filter (lambda (link)
+               (let-alist link
+                 (string-equal .src_id chunk-id)))
+             links)))
+
+(defun tng--upstream-links (chunk)
+  "Return a list of upstream links for CHUNK."
+  (let* ((links (tng-org-project-links))
+         (chunk-id (let-alist chunk .id)))
+    (-filter (lambda (link)
+               (let-alist link
+                 (string-equal .dst_id chunk-id)))
+             links)))
+
 (defun tng--current-buffer-status ()
   "Return status as an alist:
 
