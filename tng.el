@@ -123,6 +123,30 @@ Argument END-LINE to that."
         (sha1hash . ,sha1hash)
         (chunkfilepath . ,chunkfilepath)))))
 
+(defun tng--link-from-org-item-at-point ()
+  (let ((pt (point)))
+    (when-let
+        ((id (org-entry-get pt "TNG_LINK_ID"))
+         (src_id (org-entry-get pt "TNG_LINK_SRC_ID"))
+         (dst_id (org-entry-get pt "TNG_LINK_DST_ID"))
+         (src_sha1 (org-entry-get pt "TNG_LINK_SRC_SHA1"))
+         (dst_sha1 (org-entry-get pt "TNG_LINK_DST_SHA1"))
+         (directed (org-entry-get pt "TNG_LINK_DIRECTED"))
+         (flag (org-entry-get pt "TNG_LINK_FLAG"))
+         (comment (org-entry-get pt "TNG_LINK_COMMENT"))
+         (src_comment (org-entry-get pt "TNG_LINK_SRC_COMMENT"))
+         (dst_comment (org-entry-get pt "TNG_LINK_DST_COMMENT")))
+      `((id . ,id)
+        (src_id . ,src_id)
+        (dst_id . ,dst_id)
+        (src_sha1 . ,src_sha1)
+        (dst_sha1 . ,dst_sha1)
+        (directed . ,directed)
+        (flag . ,flag)
+        (comment . ,comment)
+        (src_comment . ,src_comment)
+        (dst_comment . ,dst_comment)))))
+
 (defun tng-org-project-chunks ()
   (when-let
       ((tng-files
@@ -134,6 +158,22 @@ Argument END-LINE to that."
       :select #'tng--chunk-from-org-item-at-point
       :from tng-files
       :where '(property "tng_id"))))
+
+(defun tng-org-project-links ()
+  (when-let
+      ((tng-files
+        (mapcar
+         (lambda (file)
+           (file-name-concat ".tng" file))
+         (directory-files
+          (file-name-concat tng-project-dir ".tng")
+          (null :full)
+          "link.*org$"
+          :nosort))))
+    (org-ql-query
+      :select #'tng--link-from-org-item-at-point
+      :from tng-files
+      :where '(property "tng_link_id"))))
 
 
 (defvar tng--post-add-region-functions nil
