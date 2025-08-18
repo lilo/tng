@@ -27,6 +27,7 @@
 (require 'cl-lib)
 (require 'dash)
 (require 'org-ml)
+(require 'org-ql)
 
 (defvar-local tng--status nil
   "Current buffer status as alist.")
