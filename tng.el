@@ -233,7 +233,15 @@ Argument END to here."
           (if (not arg)
               (read-from-minibuffer "Comment for this chunk: ")))
          (chunk-id (org-id-new)) ;; TODO
-         (element (format "* %s\n:PROPERTIES:\n:tng_id: %s\n:tng_filepath: %s\n:tng_start_line: %s\n:tng_end_line: %s\n:tng_comment: %s\n:tng_sha1hash: %s\n:END:\n" comment chunk-id filepath begin-line end-line comment sha1-hash))) ;; TODO: slugify title
+         (element (format "* %s
+:PROPERTIES:
+:tng_id: %s
+:tng_filepath: %s
+:tng_start_line: %s
+:tng_end_line: %s
+:tng_comment: %s
+:tng_sha1hash: %s
+:END:\n\n" comment chunk-id filepath begin-line end-line comment sha1-hash))) ;; TODO: slugify title
     (let ((temporary-file-directory
            (file-name-concat tng-project-dir ".tng")))
       (make-temp-file "chunk-" (null :dir-flag) ".org" element))
@@ -466,7 +474,18 @@ We can use this function to `interactive' without needing to call
          (flag 1)
          (comment (read-from-minibuffer "Comment for link: "))
          (element
-          (format "* %s\n:PROPERTIES:\n:tng_link_src_id: %s\n:tng_link_dst_id: %s\n:tng_link_src_sha1: %s\n:tng_link_dst_sha1: %s\n:tng_link_directed: %s\n:tng_link_flag: %s\n:tng_link_comment: %s\n:tng_link_src_comment: %s\n:tng_link_dst_comment: %s\n:END:\n" comment src-id dst-id srcsha1 dstsha1 directed flag comment src-comment dst-comment)))
+          (format "* %s
+:PROPERTIES:
+:tng_link_src_id: %s
+:tng_link_dst_id: %s
+:tng_link_src_sha1: %s
+:tng_link_dst_sha1: %s
+:tng_link_directed: %s
+:tng_link_flag: %s
+:tng_link_comment: %s
+:tng_link_src_comment: %s
+:tng_link_dst_comment: %s
+:END:\n\n" comment src-id dst-id srcsha1 dstsha1 directed flag comment src-comment dst-comment)))
     (let ((temporary-file-directory
            (file-name-concat tng-project-dir ".tng")))
       (make-temp-file "link-" (null :dir-flag) ".org" element))))
