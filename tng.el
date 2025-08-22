@@ -115,7 +115,8 @@ Argument END-LINE to that."
          (end_line (string-to-number (org-entry-get pt "TNG_END_LINE")))
          (comment (org-entry-get pt "TNG_COMMENT"))
          (sha1hash (org-entry-get pt "TNG_SHA1HASH"))
-         (chunkfilepath (file-relative-name (buffer-file-name) tng-project-dir)))
+         (chunkfilepath
+          (file-relative-name (buffer-file-name) tng-project-dir)))
       `((id . ,id)
         (filepath . ,filepath)
         (start_line . ,start_line)
@@ -156,7 +157,7 @@ Argument END-LINE to that."
            (file-name-concat ".tng" file))
          (directory-files
           (file-name-concat tng-project-dir ".tng")
-          (null :full)
+          (not :full)
           "chunk.*org$"
           :nosort))))
     (org-ql-query
@@ -172,7 +173,7 @@ Argument END-LINE to that."
            (file-name-concat ".tng" file))
          (directory-files
           (file-name-concat tng-project-dir ".tng")
-          (null :full)
+          (not :full)
           "link.*org$"
           :nosort))))
     (org-ql-query
@@ -191,7 +192,9 @@ Takes START and END as arguments.")
   (tng--refresh-indicators))
 
 (add-to-list 'tng--post-add-region-functions #'tng-pulse-region)
-(add-to-list 'tng--post-add-region-functions #'tng--refresh-status-after-chunk-add)
+(add-to-list
+ 'tng--post-add-region-functions
+ #'tng--refresh-status-after-chunk-add)
 
 (defun tng-add-region (arg begin end)
   "Add new resource from the region.
@@ -242,10 +245,17 @@ Argument END to here."
 :tng_end_line: %s
 :tng_comment: %s
 :tng_sha1hash: %s
-:END:\n\n" comment chunk-id filepath begin-line end-line comment sha1-hash))) ;; TODO: slugify title
+:END:\n\n"
+                          comment
+                          chunk-id
+                          filepath
+                          begin-line
+                          end-line
+                          comment
+                          sha1-hash))) ;; TODO: slugify title
     (let ((temporary-file-directory
            (file-name-concat tng-project-dir ".tng")))
-      (make-temp-file "chunk-" (null :dir-flag) ".org" element))
+      (make-temp-file "chunk-" (not :dir-flag) ".org" element))
     (dolist (fn tng--post-add-region-functions)
       (funcall fn begin-line end-line)))
   (deactivate-mark))
@@ -256,7 +266,8 @@ Argument END to here."
          (end-line (line-number-at-pos end))
          (chunk (alt-completing-read
                  "Select: "
-                 (tng-get-completion-chunk-alist (let-alist tng--status .chunks)))))
+                 (tng-get-completion-chunk-alist
+                  (let-alist tng--status .chunks)))))
     (let-alist chunk
       (tng--update-chunk-begin-end-lines .id start-line end-line)))
   (tng--refresh-current-buffer-status)
@@ -266,9 +277,10 @@ Argument END to here."
 (defun tng--update-chunk-begin-end-lines (chunk-id begin-line end-line)
   "Update BEGIN-LINE and END-LINE for chunk where id = CHUNK-ID"
   (progn
-    (tng--update-chunk-property chunk-id "tng_start_line" (number-to-string begin-line))
-    (tng--update-chunk-property chunk-id "tng_end_line" (number-to-string end-line))))
-
+    (tng--update-chunk-property chunk-id
+                                "tng_start_line" (number-to-string begin-line))
+    (tng--update-chunk-property chunk-id
+                                "tng_end_line" (number-to-string end-line))))
 
 (defun tng--update-chunk-property (chunk-id property value)
   "Update PROPERTY for chunk where id = CHUNK-ID"
@@ -337,7 +349,9 @@ WHERE id = ?"
                 .id
                 'face 'default
                 'action (lambda (_button) (tng-list-chunks-jump)))
-               (list .filepath) (list (format "%s:%s" .start_line .end_line)) (list .comment))))))
+               (list .filepath)
+               (list (format "%s:%s" .start_line .end_line))
+               (list .comment))))))
       (setq tabulated-list-entries (mapcar #'tabulate-chunk chunks)))
     (tabulated-list-init-header)
     (tabulated-list-print)))
@@ -386,7 +400,8 @@ WHERE id = ?"
     (define-key map (kbd "r") #'tng-list-chunks-reset-lines-read-lines)
     map))
 
-(define-derived-mode tng-list-chunks-mode tabulated-list-mode "tng-list-chunks-mode"
+(define-derived-mode tng-list-chunks-mode
+  tabulated-list-mode "tng-list-chunks-mode"
   "Major mode for listing chunks.
 \\<tng-list-chunks-mode-map>
 \\{tng-list-chunks-mode-map}"
@@ -397,7 +412,9 @@ WHERE id = ?"
                                ("pos" 8 t)
 			       ("comment"  25 t)])
   (setq tabulated-list-sort-key (cons "filename" (not :invert)))
-  (add-hook 'tabulated-list-revert-hook #'tng-list-chunks-refresh (not :depth) :local))
+  (add-hook
+   'tabulated-list-revert-hook
+   #'tng-list-chunks-refresh (not :depth) :local))
 
 (put 'tng-list-chunks-mode 'mode-class 'special)
 
@@ -411,7 +428,11 @@ WHERE id = ?"
     (tng-list-chunks-refresh)))
 
 ;; https://www.howardism.org/Technical/Emacs/alt-completing-read.html
-(defun alt-completing-read (prompt collection &optional predicate require-match initial-input hist def inherit-input-method)
+(defun alt-completing-read
+    (prompt
+     collection
+     &optional
+     predicate require-match initial-input hist def inherit-input-method)
   "Calls `completing-read' but returns the value from COLLECTION.
 
 Simple wrapper around the `completing-read' function that assumes
@@ -432,14 +453,23 @@ We can use this function to `interactive' without needing to call
       (interactive (list (alt-completing-read \"Host: \" favorite-hosts)))
       (message \"Rockin' and rollin' to %s\" hostname))"
 
-  ;; Yes, Emacs really should have an `alistp' predicate to make this code more readable:
   (cl-flet ((assoc-list-p (obj) (and (listp obj) (consp (car obj)))))
 
     (let* ((choice
-            (completing-read prompt collection predicate require-match initial-input hist def inherit-input-method))
+            (completing-read
+             prompt
+             collection
+             predicate
+             require-match
+             initial-input
+             hist
+             def
+             inherit-input-method))
            (results (cond
-                     ((hash-table-p collection) (gethash choice collection))
-                     ((assoc-list-p collection) (alist-get choice collection def nil 'equal))
+                     ((hash-table-p collection)
+                      (gethash choice collection))
+                     ((assoc-list-p collection)
+                      (alist-get choice collection def nil 'equal))
                      (t                         choice))))
       results)))
 
@@ -458,12 +488,16 @@ We can use this function to `interactive' without needing to call
   "Link chunk at point with another chunk."
   (interactive
    (let* ((all-chunks (tng-org-project-chunks))
-          (src (alt-completing-read "Select SRC: " (tng-get-completion-chunk-alist all-chunks)))
+          (src
+           (alt-completing-read
+            "Select SRC: " (tng-get-completion-chunk-alist all-chunks)))
           (but-src-chunks
            (-remove
             (lambda (c) (eq (let-alist c .id) (let-alist src .id)))
             all-chunks))
-          (dst (alt-completing-read "Select DST: " (tng-get-completion-chunk-alist but-src-chunks))))
+          (dst
+           (alt-completing-read
+            "Select DST: " (tng-get-completion-chunk-alist but-src-chunks))))
      (list src dst)))
   (let* ((src-id (let-alist src-chunk .id))
          (dst-id (let-alist dst-chunk .id))
@@ -486,10 +520,19 @@ We can use this function to `interactive' without needing to call
 :tng_link_comment: %s
 :tng_link_src_comment: %s
 :tng_link_dst_comment: %s
-:END:\n\n" comment src-id dst-id srcsha1 dstsha1 directed flag comment src-comment dst-comment)))
+:END:\n\n"
+                  comment
+                  src-id
+                  dst-id
+                  srcsha1
+                  dstsha1
+                  directed
+                  flag comment
+                  src-comment
+                  dst-comment)))
     (let ((temporary-file-directory
            (file-name-concat tng-project-dir ".tng")))
-      (make-temp-file "link-" (null :dir-flag) ".org" element))))
+      (make-temp-file "link-" (not :dir-flag) ".org" element))))
 
 (defun tng-chunk-move-up (chunk)
   (interactive
@@ -529,6 +572,12 @@ We can use this function to `interactive' without needing to call
   (when chunk
     (tng-chunk-resize chunk :begin 0 :end -1)))
 
+(defun tng--downstream-chunks (chunk)
+  "Return a list of downstream chunks for CHUNK.")
+
+(defun tng--upstream-chunks (chunk)
+  "Return a list of upstream chunks for CHUNK.")
+
 (defun tng--downstream-links (chunk)
   "Return a list of downstream links for CHUNK."
   (let* ((links (tng-org-project-links))
@@ -566,14 +615,19 @@ TODO: chunks that have their upstreams changed
                (eob (point-max)))
           (if (> chunk-eoc eob)
               (push chunk out)
-            (let ((sha1be (sha1 (buffer-substring-no-properties chunk-boc chunk-eoc))))
+            (let ((sha1be
+                   (sha1 (buffer-substring-no-properties chunk-boc chunk-eoc))))
               (if (string-equal sha1be .sha1hash)
                   (progn
-                    (let* ((chunk-boc-marker (set-marker (make-marker) chunk-boc))
-                           (chunk-eoc-marker (set-marker (make-marker) chunk-eoc)))
+                    (let* ((chunk-boc-marker
+                            (set-marker (make-marker) chunk-boc))
+                           (chunk-eoc-marker
+                            (set-marker (make-marker) chunk-eoc)))
                       (set-marker-insertion-type chunk-boc-marker :advances)
-                      (add-to-list 'chunk `(boc-marker . ,chunk-boc-marker) :append)
-                      (add-to-list 'chunk `(eoc-marker . ,chunk-eoc-marker) :append))
+                      (add-to-list 'chunk
+                                   `(boc-marker . ,chunk-boc-marker) :append)
+                      (add-to-list 'chunk
+                                   `(eoc-marker . ,chunk-eoc-marker) :append))
                     (push chunk good))
                 (push chunk changed)))))))
     `((chunks . ,chunks)
@@ -594,7 +648,9 @@ the markers or both point to new lines."
                (chunk-eoc (cdr chunk-rectangle))
                (chunk-marker-start-line (line-number-at-pos .boc-marker))
                (chunk-marker-end-line (1- (line-number-at-pos .eoc-marker)))
-               (sha1markers (sha1 (buffer-substring-no-properties .boc-marker .eoc-marker))))
+               (sha1markers
+                (sha1
+                 (buffer-substring-no-properties .boc-marker .eoc-marker))))
           (when (and
                  (or (not (= chunk-marker-start-line .start_line))
                      (not (= chunk-marker-end-line .end_line)))
@@ -643,14 +699,16 @@ the markers or both point to new lines."
       (tng--create-overlay
        cc
        `(face isearch-fail
-         before-string ,(propertize " " 'display '(left-fringe question-mark shadow))
+              before-string
+              ,(propertize " " 'display '(left-fringe question-mark shadow))
          tng-chunk-id ,(let-alist cc .id)
          tng-chunk ,cc)))
     (dolist (gc .good)
       (tng--create-overlay
        gc
        `(face highlight
-         before-string ,(propertize " " 'display '(left-fringe large-circle shadow))
+              before-string
+              ,(propertize " " 'display '(left-fringe large-circle shadow))
          tng-chunk-id ,(let-alist gc .id)
          tng-chunk ,gc)))))
 
@@ -669,14 +727,19 @@ the markers or both point to new lines."
                (eob (point-max)))
           (if (> chunk-eoc eob)
               (push c out)
-            (let ((sha1be (sha1 (buffer-substring-no-properties chunk-boc chunk-eoc))))
+            (let ((sha1be
+                   (sha1 (buffer-substring-no-properties chunk-boc chunk-eoc))))
               (if (string-equal sha1be .sha1hash)
                   (progn
-                    (let* ((chunk-boc-marker (set-marker (make-marker) chunk-boc))
-                           (chunk-eoc-marker (set-marker (make-marker) chunk-eoc)))
+                    (let* ((chunk-boc-marker
+                            (set-marker (make-marker) chunk-boc))
+                           (chunk-eoc-marker
+                            (set-marker (make-marker) chunk-eoc)))
                       (set-marker-insertion-type chunk-boc-marker :advances)
-                      (add-to-list 'c `(boc-marker . ,chunk-boc-marker) :append)
-                      (add-to-list 'c `(eoc-marker . ,chunk-eoc-marker) :append))
+                      (add-to-list 'c
+                                   `(boc-marker . ,chunk-boc-marker) :append)
+                      (add-to-list 'c
+                                   `(eoc-marker . ,chunk-eoc-marker) :append))
                     (push c good))
                 (push c changed)))))))
     `((chunks . ,chunks)
@@ -742,7 +805,9 @@ T[=]"
            (good (length .good))
            (changed (length .changed))
            (out (length .out)))
-      (propertize (format " T[%d/%d/%d/%d]" all good changed out) 'face 'compilation-error))))
+      (propertize
+       (format " T[%d/%d/%d/%d]" all good changed out)
+       'face 'compilation-error))))
 
 (defvar-keymap tng-repeat-keymap
   :repeat t
