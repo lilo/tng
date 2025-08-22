@@ -1,0 +1,13 @@
+* first -> url
+:PROPERTIES:
+:tng_link_src_id: f8670bef-860d-408b-acb1-cd3a3e6bfd0b
+:tng_link_dst_id: 8b05ddf4-6a7d-4143-963b-3ded5388b505
+:tng_link_src_sha1: 5cd84d16a1f76a11337c7ae985772970a78616f2
+:tng_link_dst_sha1: 03e61fff95591ecbb74aad52ed6c3a69ad3f2926
+:tng_link_directed: 1
+:tng_link_flag: 1
+:tng_link_comment: first -> url
+:tng_link_src_comment: first line
+:tng_link_dst_comment: github url
+:END:
+

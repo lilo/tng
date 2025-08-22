@@ -1,0 +1,10 @@
+* github url
+:PROPERTIES:
+:tng_id: 8b05ddf4-6a7d-4143-963b-3ded5388b505
+:tng_filepath: tng.el
+:tng_start_line: 4
+:tng_end_line: 4
+:tng_comment: github url
+:tng_sha1hash: 03e61fff95591ecbb74aad52ed6c3a69ad3f2926
+:END:
+

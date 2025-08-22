@@ -1,0 +1,10 @@
+* license
+:PROPERTIES:
+:tng_id: 5a416793-62ed-4907-a7ed-a4a56e0d11a3
+:tng_filepath: tng.el
+:tng_start_line: 6
+:tng_end_line: 19
+:tng_comment: license
+:tng_sha1hash: c2c6ea0c16e21b6c506e8f8b7d8be06e90dbec57
+:END:
+
