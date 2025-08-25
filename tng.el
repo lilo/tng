@@ -609,6 +609,7 @@ TODO: chunks that have their upstreams changed
                     (push chunk good))
                 (push chunk changed)))))))
     `((chunks . ,chunks)
+      (links . ,links)
       (good . ,good)
       (changed . ,changed)
       (out . ,out))))
