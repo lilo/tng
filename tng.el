@@ -616,7 +616,8 @@ TODO: chunks that have their upstreams changed
           (if (> chunk-eoc eob)
               (push chunk out)
             (let ((sha1be
-                   (sha1 (buffer-substring-no-properties chunk-boc chunk-eoc))))
+                   (sha1
+                    (buffer-substring-no-properties chunk-boc chunk-eoc))))
               (if (string-equal sha1be .sha1hash)
                   (progn
                     (let* ((chunk-boc-marker
@@ -728,7 +729,8 @@ the markers or both point to new lines."
           (if (> chunk-eoc eob)
               (push c out)
             (let ((sha1be
-                   (sha1 (buffer-substring-no-properties chunk-boc chunk-eoc))))
+                   (sha1
+                    (buffer-substring-no-properties chunk-boc chunk-eoc))))
               (if (string-equal sha1be .sha1hash)
                   (progn
                     (let* ((chunk-boc-marker
