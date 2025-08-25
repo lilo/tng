@@ -583,7 +583,8 @@ We can use this function to `interactive' without needing to call
 TODO: chunks that have their upstreams changed
 "
   (let* ((chunks (tng--file-chunks (tng--current-filepath)))
-         changed out good)
+         (links (tng-org-project-links))
+         changed out good upstream downstream up-changed down-changed)
     (dolist (chunk chunks)
       (let-alist chunk
         (let* ((chunk-rectangle (tng--line-rectangle .start_line .end_line))
