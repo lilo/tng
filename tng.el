@@ -398,7 +398,7 @@ WHERE id = ?"
 (defun tng-list-chunks ()
   "Display a list of existing chunks."
   (interactive)
-  (let ((buf (get-buffer-create "* TNG chunks*")))
+  (let ((buf (get-buffer-create "*TNG chunks*")))
     (switch-to-buffer buf)
     (setq-local tng-project-dir tng-project-dir)
     (tng-list-chunks-mode)
