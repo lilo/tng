@@ -1,0 +1,13 @@
+* org-ql-query use (links)
+:PROPERTIES:
+:tng_link_src_id: 3c411909-1e49-41c4-9471-5cc3d1414837
+:tng_link_dst_id: cade3586-9039-432e-9ba9-be94b40ec1fc
+:tng_link_src_sha1: 5c87041053c0fc5a3c18fb459caa91fbb440bfe9
+:tng_link_dst_sha1: 0291ca5aed34a59956e840189f4fd915fc4c9448
+:tng_link_directed: 1
+:tng_link_flag: 1
+:tng_link_comment: org-ql-query use (links)
+:tng_link_src_comment: requirements
+:tng_link_dst_comment: org-ql-query-use-links
+:END:
+

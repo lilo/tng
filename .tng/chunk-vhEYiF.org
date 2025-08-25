@@ -1,0 +1,10 @@
+* org-ql-query use
+:PROPERTIES:
+:tng_id: 494dce20-b376-4828-93cc-af5937164f74
+:tng_filepath: tng.el
+:tng_start_line: 163
+:tng_end_line: 166
+:tng_comment: org-ql-query use
+:tng_sha1hash: 46ec562829881ec3dcb48cc855a37adadb5635f8
+:END:
+

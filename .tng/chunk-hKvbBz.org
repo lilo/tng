@@ -1,0 +1,10 @@
+* org-ql-query-use-links
+:PROPERTIES:
+:tng_id: cade3586-9039-432e-9ba9-be94b40ec1fc
+:tng_filepath: tng.el
+:tng_start_line: 179
+:tng_end_line: 182
+:tng_comment: org-ql-query-use-links
+:tng_sha1hash: 0291ca5aed34a59956e840189f4fd915fc4c9448
+:END:
+
