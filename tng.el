@@ -678,7 +678,7 @@ the markers or both point to new lines."
        cc
        `(face isearch-fail
               before-string
-              ,(propertize " " 'display '(left-fringe question-mark shadow))
+              ,(propertize " " 'display '(right-fringe question-mark shadow))
          tng-chunk-id ,(let-alist cc .id)
          tng-chunk ,cc)))
     (dolist (gc .good)
@@ -686,7 +686,7 @@ the markers or both point to new lines."
        gc
        `(face highlight
               before-string
-              ,(propertize " " 'display '(left-fringe large-circle shadow))
+              ,(propertize " " 'display '(right-fringe large-circle shadow))
          tng-chunk-id ,(let-alist gc .id)
          tng-chunk ,gc)))))
 
