@@ -8,6 +8,8 @@
 :tng_link_flag: 1
 :tng_link_comment: first -> url
 :tng_link_src_comment: first line
+:tng_link_src_filepath: tng.el
 :tng_link_dst_comment: github url
+:tng_link_dst_filepath: tng.el
 :END:
 

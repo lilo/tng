@@ -137,7 +137,9 @@ Argument END-LINE to that."
          (flag (org-entry-get pt "TNG_LINK_FLAG"))
          (comment (org-entry-get pt "TNG_LINK_COMMENT"))
          (src_comment (org-entry-get pt "TNG_LINK_SRC_COMMENT"))
-         (dst_comment (org-entry-get pt "TNG_LINK_DST_COMMENT")))
+         (src_filepath (org-entry-get pt "TNG_LINK_SRC_FILEPATH"))
+         (dst_comment (org-entry-get pt "TNG_LINK_DST_COMMENT"))
+         (dst_filepath (org-entry-get pt "TNG_LINK_DST_FILEPATH")))
       `((id . ,id)
         (src_id . ,src_id)
         (dst_id . ,dst_id)
@@ -481,7 +483,9 @@ We can use this function to `interactive' without needing to call
          (srcsha1 (let-alist src-chunk .sha1hash))
          (dstsha1 (let-alist dst-chunk .sha1hash))
          (src-comment (let-alist src-chunk .comment))
+         (src-filepath (let-alist src-chunk .filepath))
          (dst-comment (let-alist dst-chunk .comment))
+         (dst-filepath (let-alist dst-chunk .filepath))
          (directed 1)
          (flag 1)
          (comment (read-from-minibuffer "Comment for link: "))
@@ -496,7 +500,9 @@ We can use this function to `interactive' without needing to call
 :tng_link_flag: %s
 :tng_link_comment: %s
 :tng_link_src_comment: %s
+:tng_link_src_filepath: %s
 :tng_link_dst_comment: %s
+:tng_link_dst_filepath: %s
 :END:\n\n"
                   comment
                   src-id
@@ -506,7 +512,9 @@ We can use this function to `interactive' without needing to call
                   directed
                   flag comment
                   src-comment
-                  dst-comment)))
+                  src-filepath
+                  dst-comment
+                  dst-filepath)))
     (let ((temporary-file-directory
            (file-name-concat tng-project-dir ".tng")))
       (make-temp-file "link-" (not :dir-flag) ".org" element))))
