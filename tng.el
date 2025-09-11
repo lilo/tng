@@ -796,7 +796,7 @@ T[=]"
            (out (length .out)))
       (propertize
        (format " T[%d/%d/%d/%d]" all good changed out)
-       'face 'compilation-error))))
+       'face 'diff-error))))
 
 (defvar-keymap tng-repeat-keymap
   :repeat t
