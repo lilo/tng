@@ -28,6 +28,7 @@
 (require 'dash)
 (require 'org-ml)
 (require 'org-ql)
+(require 's)
 
 (defvar-local tng--status nil
   "Current buffer status as alist.")
@@ -239,22 +240,15 @@ Argument END to here."
           (if (not arg)
               (read-from-minibuffer "Comment for this chunk: ")))
          (chunk-id (org-id-new)) ;; TODO
-         (element (format "* %s
+         (element (s-lex-format "* ${comment}
 :PROPERTIES:
-:tng_id: %s
-:tng_filepath: %s
-:tng_start_line: %s
-:tng_end_line: %s
-:tng_comment: %s
-:tng_sha1hash: %s
-:END:\n\n"
-                          comment
-                          chunk-id
-                          filepath
-                          begin-line
-                          end-line
-                          comment
-                          sha1-hash))) ;; TODO: slugify title
+:tng_id: ${chunk-id}
+:tng_filepath: ${filepath}
+:tng_start_line: ${begin-line}
+:tng_end_line: ${end-line}
+:tng_comment: ${comment}
+:tng_sha1hash: ${sha1-hash}
+:END:\n\n"))) ;; TODO: slugify title
     (let ((temporary-file-directory
            (file-name-concat tng-project-dir ".tng")))
       (make-temp-file "chunk-" (not :dir-flag) ".org" element))
@@ -490,31 +484,20 @@ We can use this function to `interactive' without needing to call
          (flag 1)
          (comment (read-from-minibuffer "Comment for link: "))
          (element
-          (format "* %s
+          (s-lex-format "* ${comment}
 :PROPERTIES:
-:tng_link_src_id: %s
-:tng_link_dst_id: %s
-:tng_link_src_sha1: %s
-:tng_link_dst_sha1: %s
-:tng_link_directed: %s
-:tng_link_flag: %s
-:tng_link_comment: %s
-:tng_link_src_comment: %s
-:tng_link_src_filepath: %s
-:tng_link_dst_comment: %s
-:tng_link_dst_filepath: %s
-:END:\n\n"
-                  comment
-                  src-id
-                  dst-id
-                  srcsha1
-                  dstsha1
-                  directed
-                  flag comment
-                  src-comment
-                  src-filepath
-                  dst-comment
-                  dst-filepath)))
+:tng_link_src_id: ${src-id}
+:tng_link_dst_id: ${dst-id}
+:tng_link_src_sha1: ${srcsha1}
+:tng_link_dst_sha1: ${dstsha1}
+:tng_link_directed: ${directed}
+:tng_link_flag: ${flag}
+:tng_link_comment: ${comment}
+:tng_link_src_comment: ${src-comment}
+:tng_link_src_filepath: ${src-filepath}
+:tng_link_dst_comment: ${dst-comment}
+:tng_link_dst_filepath: ${dst-filepath}
+:END:\n\n"))
     (let ((temporary-file-directory
            (file-name-concat tng-project-dir ".tng")))
       (make-temp-file "link-" (not :dir-flag) ".org" element))))
