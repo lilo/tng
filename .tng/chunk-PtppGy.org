@@ -1,0 +1,10 @@
+* format
+:PROPERTIES:
+:tng_id: 679213af-451f-48b7-bebb-0ad5dba2d686
+:tng_filepath: tng.el
+:tng_start_line: 814
+:tng_end_line: 814
+:tng_comment: format
+:tng_sha1hash: 2808df335cb4269c03c073e769386d47fffe03a4
+:END:
+
