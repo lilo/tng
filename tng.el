@@ -29,6 +29,7 @@
 (require 'org-ml)
 (require 'org-ql)
 (require 's)
+(require 'ox-hugo)
 
 (defvar-local tng--status nil
   "Current buffer status as alist.")
@@ -240,6 +241,7 @@ Argument END to here."
           (if (not arg)
               (read-from-minibuffer "Comment for this chunk: ")))
          (chunk-id (org-id-new)) ;; TODO
+         (slug (org-hugo-slug comment))
          (element (s-lex-format "* ${comment}
 :PROPERTIES:
 :tng_id: ${chunk-id}
@@ -249,9 +251,14 @@ Argument END to here."
 :tng_comment: ${comment}
 :tng_sha1hash: ${sha1-hash}
 :END:\n\n"))) ;; TODO: slugify title
-    (let ((temporary-file-directory
-           (file-name-concat tng-project-dir ".tng")))
-      (make-temp-file "chunk-" (not :dir-flag) ".org" element))
+    (write-region
+     element
+     (not :end)
+     (file-name-concat tng-project-dir ".tng" (s-lex-format "chunk-${slug}.org"))
+     (not :append)
+     (not :visit)
+     (not :lockname)
+     'excl)
     (dolist (fn tng--post-add-region-functions)
       (funcall fn begin-line end-line)))
   (deactivate-mark))
