@@ -308,13 +308,14 @@ Argument END to here."
 
 (defun tng--delete-chunk (chunk-id)
   "Delete chunk where id = CHUNK-ID."
-  (sqlite-select
-   (sqlite-open tng-db-filename)
-   "
-DELETE FROM chunk
-WHERE id = ?"
-   (list chunk-id)
-   nil))
+  (let* ((chunks (tng-current-chunks))
+         (chunk (-first
+                 (lambda (chunk)
+                   (let-alist chunk
+                     (string-equal .id chunk-id)))
+                 chunks))
+         (chunkfile (let-alist chunk .chunkfilepath)))
+    (delete-file chunkfile (not :trash))))
 
 
 (define-minor-mode tng-mode
