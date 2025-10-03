@@ -183,7 +183,7 @@ Argument END-LINE to that."
     (org-ql-query
       :select #'tng--link-from-org-item-at-point
       :from tng-files
-      :where '(property "tng_link_id"))))
+      :where '(property "tng_link_src_id"))))
 
 
 (defvar tng--post-add-region-functions nil

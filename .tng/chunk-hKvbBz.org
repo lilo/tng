@@ -5,6 +5,6 @@
 :tng_start_line: 183
 :tng_end_line: 186
 :tng_comment: org-ql-query-use-links
-:tng_sha1hash: 0291ca5aed34a59956e840189f4fd915fc4c9448
+:tng_sha1hash: 820de3f0c5ef6fe8235c8c50e65b5f0fb04c1970
 :END:
 
