@@ -1,0 +1,10 @@
+* s-lex-format
+:PROPERTIES:
+:tng_id: 1537ed53-022d-4d99-b0bc-d177ed4a3f35
+:tng_filepath: tng.el
+:tng_start_line: 494
+:tng_end_line: 508
+:tng_comment: s-lex-format
+:tng_sha1hash: 6da8b5e8c6c961fc5c081bae85a8fe177595c8a8
+:END:
+
