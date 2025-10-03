@@ -784,10 +784,11 @@ T[=]"
     (let* ((all (length .chunks))
            (good (length .good))
            (changed (length .changed))
-           (out (length .out)))
+           (out (length .out))
+           (lighter-face (if (= changed 0) 'success 'diff-error)))
       (propertize
        (format " T[%d/%d/%d/%d]" all good changed out)
-       'face 'diff-error))))
+       'face lighter-face))))
 
 (defvar-keymap tng-repeat-keymap
   :repeat t
