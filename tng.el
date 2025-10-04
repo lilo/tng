@@ -141,7 +141,9 @@ Argument END-LINE to that."
          (src_comment (org-entry-get pt "TNG_LINK_SRC_COMMENT"))
          (src_filepath (org-entry-get pt "TNG_LINK_SRC_FILEPATH"))
          (dst_comment (org-entry-get pt "TNG_LINK_DST_COMMENT"))
-         (dst_filepath (org-entry-get pt "TNG_LINK_DST_FILEPATH")))
+         (dst_filepath (org-entry-get pt "TNG_LINK_DST_FILEPATH"))
+         (linkfilepath
+          (file-relative-name (buffer-file-name) tng-project-dir)))
       `((id . ,id)
         (src_id . ,src_id)
         (dst_id . ,dst_id)
@@ -151,7 +153,8 @@ Argument END-LINE to that."
         (flag . ,flag)
         (comment . ,comment)
         (src_comment . ,src_comment)
-        (dst_comment . ,dst_comment)))))
+        (dst_comment . ,dst_comment)
+        (linkfilepath . ,linkfilepath)))))
 
 (defun tng-org-project-chunks ()
   (when-let
@@ -295,6 +298,19 @@ Argument END to here."
                  chunks))
          (chunkfile (let-alist chunk .chunkfilepath)))
     (with-current-buffer (find-file-noselect chunkfile)
+      (org-entry-put (point) property value)
+      (save-buffer))))
+
+(defun tng--update-link-property (link-id property value)
+  "Update PROPERTY for link where id = LINK-ID"
+  (let* ((links (tng-org-project-links))
+         (link (-first
+                 (lambda (link)
+                   (let-alist link
+                     (string-equal .id link-id)))
+                 links))
+         (linkfile (let-alist chunk .linkfilepath)))
+    (with-current-buffer (find-file-noselect linkfile)
       (org-entry-put (point) property value)
       (save-buffer))))
 
