@@ -1,9 +1,0 @@
-* requirements
-:PROPERTIES:
-:tng_id: 3c411909-1e49-41c4-9471-5cc3d1414837
-:tng_filepath: tng.el
-:tng_start_line: 27
-:tng_end_line: 32
-:tng_comment: requirements
-:tng_sha1hash: a5423776c3afbe51aba8b56d45ba1f925b68740d
-:END:
