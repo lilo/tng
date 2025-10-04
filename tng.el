@@ -250,7 +250,7 @@ Argument END to here."
 :tng_end_line: ${end-line}
 :tng_comment: ${comment}
 :tng_sha1hash: ${sha1-hash}
-:END:\n\n"))) ;; TODO: slugify title
+:END:\n\n")))
     (write-region
      element
      (not :end)
@@ -480,7 +480,8 @@ We can use this function to `interactive' without needing to call
            (alt-completing-read
             "Select DST: " (tng-get-completion-chunk-alist but-src-chunks))))
      (list src dst)))
-  (let* ((src-id (let-alist src-chunk .id))
+  (let* ((link-id (org-id-new))
+         (src-id (let-alist src-chunk .id))
          (dst-id (let-alist dst-chunk .id))
          (srcsha1 (let-alist src-chunk .sha1hash))
          (dstsha1 (let-alist dst-chunk .sha1hash))
@@ -491,9 +492,11 @@ We can use this function to `interactive' without needing to call
          (directed 1)
          (flag 1)
          (comment (read-from-minibuffer "Comment for link: "))
+         (slug (org-hugo-slug comment))
          (element
           (s-lex-format "* ${comment}
 :PROPERTIES:
+:tng_link_id: ${link-id}
 :tng_link_src_id: ${src-id}
 :tng_link_dst_id: ${dst-id}
 :tng_link_src_sha1: ${srcsha1}
@@ -505,10 +508,15 @@ We can use this function to `interactive' without needing to call
 :tng_link_src_filepath: ${src-filepath}
 :tng_link_dst_comment: ${dst-comment}
 :tng_link_dst_filepath: ${dst-filepath}
-:END:\n\n"))
-    (let ((temporary-file-directory
-           (file-name-concat tng-project-dir ".tng")))
-      (make-temp-file "link-" (not :dir-flag) ".org" element))))
+:END:\n\n")))
+    (write-region
+     element
+     (not :end)
+     (file-name-concat tng-project-dir ".tng" (s-lex-format "link-${slug}.org"))
+     (not :append)
+     (not :visit)
+     (not :lockname)
+     'excl)))
 
 (defun tng-chunk-move-up (chunk)
   (interactive
@@ -755,7 +763,7 @@ T[=]"
            (out (length .out))
            (lighter-face (if (= changed 0) 'success 'diff-error)))
       (propertize
-       (format " T[%d/%d/%d/%d]" all good changed out)
+       (s-lex-format " T[${all}/${good}/${changed}/${out}]")
        'face lighter-face))))
 
 (defvar-keymap tng-repeat-keymap

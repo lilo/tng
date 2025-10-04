@@ -1,0 +1,16 @@
+* require s.el
+:PROPERTIES:
+:tng_link_id: f91c4869-3c74-4e91-8f5f-e5a34e4a6271
+:tng_link_src_id: 3c411909-1e49-41c4-9471-5cc3d1414837
+:tng_link_dst_id: f5e8a776-6d3e-46b0-80ae-21e7d47adae2
+:tng_link_src_sha1: a5423776c3afbe51aba8b56d45ba1f925b68740d
+:tng_link_dst_sha1: db6622cd4af6e86915da2d48f4e84b332fa5c9ba
+:tng_link_directed: 1
+:tng_link_flag: 1
+:tng_link_comment: require s.el
+:tng_link_src_comment: requirements
+:tng_link_src_filepath: tng.el
+:tng_link_dst_comment: s-lex-format lighter
+:tng_link_dst_filepath: tng.el
+:END:
+
