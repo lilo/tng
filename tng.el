@@ -1,5 +1,5 @@
 ;;; package --- tng.el Track dependencies across your code -*- lexical-binding:t; coding:utf-8 -*-
-;; Copyright (C) 2024 Sergey Lilo
+;; Copyright (C) 2025 Sergey Lilo.
 ;; Author: Sergey Lilo <s3rg31110@gmail.com>
 ;; URL: https://github.com/lilo/tng.el
 
