@@ -491,7 +491,7 @@ We can use this function to `interactive' without needing to call
           (but-src-chunks
            (-remove
             (lambda (c) (eq (let-alist c .id) (let-alist src .id)))
-            all-chunks))
+            all-chunks)) ; TODO: (`remove' src all-chunks)
           (dst
            (alt-completing-read
             "Select DST: " (tng-get-completion-chunk-alist but-src-chunks))))
