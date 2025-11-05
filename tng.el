@@ -524,7 +524,9 @@ We can use this function to `interactive' without needing to call
      (not :append)
      (not :visit)
      (not :lockname)
-     'excl)))
+     'excl)
+    (tng--refresh-current-buffer-status)
+    (tng--refresh-indicators)))
 
 (defun tng-chunk-move-up (chunk)
   (interactive
