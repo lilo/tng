@@ -777,9 +777,10 @@ T[=]"
            (good (length .good))
            (changed (length .changed))
            (out (length .out))
+           (links (length .links))
            (lighter-face (if (= changed 0) 'success 'diff-error)))
       (propertize
-       (s-lex-format " T[${all}/${good}/${changed}/${out}]")
+       (s-lex-format " T[${links}/${all}/${good}/${changed}/${out}]")
        'face lighter-face))))
 
 (defvar-keymap tng-repeat-keymap
