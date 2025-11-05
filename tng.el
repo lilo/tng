@@ -135,7 +135,6 @@ Argument END-LINE to that."
          (dst_id (org-entry-get pt "TNG_LINK_DST_ID"))
          (src_sha1 (org-entry-get pt "TNG_LINK_SRC_SHA1"))
          (dst_sha1 (org-entry-get pt "TNG_LINK_DST_SHA1"))
-         (directed (org-entry-get pt "TNG_LINK_DIRECTED"))
          (flag (org-entry-get pt "TNG_LINK_FLAG"))
          (comment (org-entry-get pt "TNG_LINK_COMMENT"))
          (src_comment (org-entry-get pt "TNG_LINK_SRC_COMMENT"))
@@ -149,7 +148,6 @@ Argument END-LINE to that."
         (dst_id . ,dst_id)
         (src_sha1 . ,src_sha1)
         (dst_sha1 . ,dst_sha1)
-        (directed . ,directed)
         (flag . ,flag)
         (comment . ,comment)
         (src_comment . ,src_comment)
@@ -505,7 +503,6 @@ We can use this function to `interactive' without needing to call
          (src-filepath (let-alist src-chunk .filepath))
          (dst-comment (let-alist dst-chunk .comment))
          (dst-filepath (let-alist dst-chunk .filepath))
-         (directed 1)
          (flag 1)
          (comment (read-from-minibuffer "Comment for link: "))
          (slug (org-hugo-slug comment))
@@ -517,7 +514,6 @@ We can use this function to `interactive' without needing to call
 :tng_link_dst_id: ${dst-id}
 :tng_link_src_sha1: ${srcsha1}
 :tng_link_dst_sha1: ${dstsha1}
-:tng_link_directed: ${directed}
 :tng_link_flag: ${flag}
 :tng_link_comment: ${comment}
 :tng_link_src_comment: ${src-comment}
