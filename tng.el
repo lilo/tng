@@ -719,10 +719,6 @@ the markers or both point to new lines."
   "Set local variable tng--status."
   (setq-local tng--status (tng--current-buffer-status)))
 
-(defun tng--refresh-buffer-status (buffer)
-  "Set local variable tng--status."
-  (setq-local tng--status (tng--current-buffer-status)))
-
 (cl-defun tng-chunk-resize (chunk &key begin end)
   "Update chunk, increasing or decreasing its boundaries."
   (let-alist chunk
