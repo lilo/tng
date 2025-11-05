@@ -37,10 +37,6 @@
 (defvar-local tng-project-dir (project-root (project-current))
   "Root of current project.")
 
-(defvar-local tng-db-filename
-    (file-name-concat tng-project-dir "tango.org")
-  "Path to the tng database.")
-
 (defgroup tng nil
   "Track deps."
   :group 'tng)
