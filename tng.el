@@ -499,7 +499,7 @@ We can use this function to `interactive' without needing to call
          (src-filepath (let-alist src-chunk .filepath))
          (dst-comment (let-alist dst-chunk .comment))
          (dst-filepath (let-alist dst-chunk .filepath))
-         (flag 1)
+         (flag 0)
          (comment (read-from-minibuffer "Comment for link: "))
          (slug (org-hugo-slug comment))
          (element
