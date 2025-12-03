@@ -722,6 +722,12 @@ the markers or both point to new lines."
   (tng--refresh-current-buffer-status)
   (tng--refresh-indicators))
 
+(defun tng--flag-link (link-id)
+  "Set flag=1 for the link.")
+
+(defun tng--resolve-link (link-id)
+  "Resolve link where .id=LINK-ID.")
+
 (defun tng-chunk-rehash (chunk)
   (interactive
    (list (tng-select-chunk)))
@@ -731,8 +737,12 @@ the markers or both point to new lines."
            (end (cdr rectangle))
            (new-sha1hash (sha1 (buffer-substring-no-properties start end))))
       (tng--update-chunk-hash .id new-sha1hash)
+      (tng--update-chunk-links .id)
       (tng--refresh-current-buffer-status)
       (tng--refresh-indicators))))
+
+(defun tng--update-chunk-links (chunk-id)
+  "Update links: sha1 and comment.")
 
 (defun tng-chunk-comment (chunk)
   (interactive
@@ -743,6 +753,8 @@ the markers or both point to new lines."
     (tng--update-chunk-comment
      .id
      (read-from-minibuffer "New comment: ")))
+  (let ((upstream-links (tng--upstream-links chunk))
+        (downstream-links (tng--downstream-links chunk))))
   (tng--refresh-current-buffer-status)
   (tng--refresh-indicators))
 
@@ -753,6 +765,9 @@ the markers or both point to new lines."
     (tng--delete-chunk .id))
   (tng--refresh-current-buffer-status)
   (tng--refresh-indicators))
+
+(defun tng--link-broken-p (link)
+  "Compare srcsha1 of the LINK and sha1 of the src_chunk")
 
 (defun tng-minor-mode-lighter ()
   "Get lighter.
@@ -772,6 +787,16 @@ T[=]"
       (propertize
        (s-lex-format " T[${links}/${all}/${good}/${changed}/${out}]")
        'face lighter-face))))
+
+(defun tng-compilation ()
+  (interactive)
+  (pop-to-buffer-same-window (with-current-buffer (get-buffer-create "*tng-compilation*")
+    (compilation-mode)
+    (let ((inhibit-read-only t))
+      (delete-region (point-min) (point-max))
+      (insert "tng.el:1:1: Warning: First line\n")
+      (insert "tng.el:2:1: Error: Second line")
+      (current-buffer)))))
 
 (defvar-keymap tng-repeat-keymap
   :repeat t
