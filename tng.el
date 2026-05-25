@@ -89,7 +89,7 @@ Argument END-LINE to that."
       (pulsar--pulse nil 'pulsar-face start end)))
   "Pulse region from BEGIN-LINE to END-LINE.")
 
-(add-to-list 'tng--post-jump-region-functions #'tng-pulse-region)
+; (add-to-list 'tng--post-jump-region-functions #'tng-pulse-region)
 
 
 (defun tng-current-chunks ()
